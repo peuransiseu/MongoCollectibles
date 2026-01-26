@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MongoCollectibles - Premium Collectible Rentals</title>
+    <meta name="description" content="Rent premium collectibles from MongoCollectibles. Choose from vintage action figures, models, and arcade machines.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1 class="logo">MongoCollectibles</h1>
+            <nav>
+                <button class="btn btn-secondary" id="viewCartBtn">View Rentals</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h2 class="hero-title">Rent the Past. Own the Moment.</h2>
+            <p class="hero-subtitle">Premium collectibles delivered to your nearest store</p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Store Selection -->
+        <section class="section-header">
+            <h2 class="section-title">Select Your Pickup Store</h2>
+            <div class="form-group">
+                <select id="storeSelect" class="form-select">
+                    <option value="">Loading stores...</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Collectibles Section -->
+        <section>
+            <div class="section-header">
+                <h2 class="section-title">Available Collectibles</h2>
+                <p class="section-subtitle">Browse our premium collection of rare and vintage items</p>
+            </div>
+            
+            <div id="collectiblesGrid" class="collectibles-grid">
+                <div class="loading">Loading collectibles...</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Rental Modal -->
+    <div id="rentalModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeModal">&times;</button>
+            
+            <h2 id="modalTitle">Rent Collectible</h2>
+            
+            <div id="modalBody">
+                <!-- Rental Duration -->
+                <div class="form-group">
+                    <label class="form-label" for="rentalDuration">Rental Duration (days)</label>
+                    <input type="number" id="rentalDuration" class="form-input" min="1" value="7" placeholder="Enter number of days">
+                </div>
+
+                <!-- Quote Summary -->
+                <div id="quoteSummary" class="quote-summary" style="display: none;">
+                    <div class="quote-row">
+                        <span>Daily Rate:</span>
+                        <span id="quoteDaily">₱0.00</span>
+                    </div>
+                    <div class="quote-row">
+                        <span>Duration:</span>
+                        <span id="quoteDuration">0 days</span>
+                    </div>
+                    <div class="quote-row quote-total">
+                        <span>Total:</span>
+                        <span id="quoteTotal">₱0.00</span>
+                    </div>
+                </div>
+
+                <!-- Special Rate Notice -->
+                <div id="specialRateNotice" class="special-rate-notice" style="display: none;">
+                    ⚠️ Special rate applied: Rentals under 7 days are charged at double the normal rate.
+                </div>
+
+                <!-- Payment Method -->
+                <div class="form-group">
+                    <label class="form-label">Payment Method</label>
+                    <div class="payment-methods">
+                        <div class="payment-method" data-method="card">
+                            <div>💳 Card</div>
+                        </div>
+                        <div class="payment-method" data-method="gcash">
+                            <div>📱 GCash</div>
+                        </div>
+                        <div class="payment-method" data-method="grabpay">
+                            <div>🚗 GrabPay</div>
+                        </div>
+                        <div class="payment-method" data-method="bpi">
+                            <div>🏦 BPI Online</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Details -->
+                <h3 style="margin-top: 1.5rem; margin-bottom: 1rem;">Billing Details</h3>
+                
+                <div class="form-group">
+                    <label class="form-label" for="customerName">Full Name *</label>
+                    <input type="text" id="customerName" class="form-input" required placeholder="Juan Dela Cruz">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="customerEmail">Email *</label>
+                    <input type="email" id="customerEmail" class="form-input" required placeholder="juan@example.com">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="customerPhone">Phone Number *</label>
+                    <input type="tel" id="customerPhone" class="form-input" required placeholder="+63 912 345 6789">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="customerAddress">Address *</label>
+                    <input type="text" id="customerAddress" class="form-input" required placeholder="123 Main Street, Barangay">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="customerCity">City *</label>
+                    <input type="text" id="customerCity" class="form-input" required placeholder="Manila">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="customerPostal">Postal Code *</label>
+                    <input type="text" id="customerPostal" class="form-input" required placeholder="1000">
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button class="btn btn-secondary" id="cancelBtn" style="flex: 1;">Cancel</button>
+                    <button class="btn btn-primary" id="checkoutBtn" style="flex: 2;">Proceed to Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Page (hidden by default) -->
+    <div id="successPage" style="display: none;">
+        <div class="container" style="text-align: center; padding: 4rem 2rem;">
+            <h1 style="font-size: 3rem; margin-bottom: 1rem;">✅ Payment Successful!</h1>
+            <p style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 2rem;">
+                Your rental has been confirmed. You'll receive a confirmation email shortly.
+            </p>
+            <button class="btn btn-primary" onclick="location.reload()">Browse More Collectibles</button>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script src="/js/checkout.js"></script>
+</body>
+</html>
