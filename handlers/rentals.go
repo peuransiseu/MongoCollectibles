@@ -143,12 +143,12 @@ func (h *RentalsHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt:       time.Now(),
 	}
 
-	// Create payment source
-	paymentID, paymentURL, err := h.paymentService.CreatePaymentSource(
+	// Create payment session
+	paymentID, paymentURL, err := h.paymentService.CreateCheckoutSession(
 		totalFee,
-		req.PaymentMethod,
-		req.Customer,
 		rentalID,
+		collectible.Name,
+		req.Duration,
 	)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
