@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/mongocollectibles/rental-system/data"
@@ -34,101 +33,72 @@ func (h *PaymentsHandler) WebhookPayMongo(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Extract event type
+	// Extract payment ID from webhook
+	// Note: Actual webhook structure may vary, this is a simplified version
 	data, ok := webhookData["data"].(map[string]interface{})
 	if !ok {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
+	// Extract event type
 	attributes, ok := data["attributes"].(map[string]interface{})
 	if !ok {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	// Check event type
 	eventType, _ := attributes["type"].(string)
 
-	switch eventType {
-	case "checkout_session.payment.paid":
-		// Handle successful payment
-		h.handlePaymentSuccess(attributes)
+	// Use the data structure we need
+	dataResource, ok := attributes["data"].(map[string]interface{})
+	if !ok {
+		// Some events might be structured differently, safely ignore or log
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	resourceAttr, ok := dataResource["attributes"].(map[string]interface{})
+	if !ok {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	paymentID, _ := resourceAttr["id"].(string)
 
-	case "checkout_session.expired":
-		// Handle session expiry - release the unit
-		h.handleSessionExpiry(attributes)
-
-	default:
-		// For backward compatibility, try to extract payment ID
-		paymentID, ok := attributes["id"].(string)
-		if ok {
-			// Verify payment status
-			status, err := h.paymentService.VerifyPayment(paymentID)
-			if err != nil {
-				w.WriteHeader(http.StatusOK)
-				return
+	if eventType == "checkout_session.expired" {
+		// Find rental by payment ID (which is the session ID in this context)
+		// Or if we store session ID separately
+		rentals := h.repo.GetAllRentals()
+		for _, rental := range rentals {
+			if rental.PaymentID == paymentID {
+				// Release unit
+				h.allocationManager.ReleaseUnit(rental.CollectibleID, rental.WarehouseID)
+				rental.PaymentStatus = models.PaymentFailed
+				h.repo.UpdateRental(rental)
+				break
 			}
+		}
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
-			// Update rental status based on payment
-			rentals := h.repo.GetAllRentals()
-			for _, rental := range rentals {
-				if rental.PaymentID == paymentID {
-					rental.PaymentStatus = status
-					h.repo.UpdateRental(rental)
-					break
-				}
-			}
+	// Verify payment status for strictness, or trust the webhook
+	status, err := h.paymentService.VerifyPayment(paymentID)
+	if err != nil {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Update rental status based on payment
+	rentals := h.repo.GetAllRentals()
+	for _, rental := range rentals {
+		if rental.PaymentID == paymentID {
+			rental.PaymentStatus = status
+			h.repo.UpdateRental(rental)
+			break
 		}
 	}
 
 	w.WriteHeader(http.StatusOK)
-}
-
-// handlePaymentSuccess processes successful payment webhook events
-func (h *PaymentsHandler) handlePaymentSuccess(attributes map[string]interface{}) {
-	paymentID, ok := attributes["id"].(string)
-	if !ok {
-		return
-	}
-
-	rentals := h.repo.GetAllRentals()
-	for _, rental := range rentals {
-		if rental.PaymentID == paymentID {
-			rental.PaymentStatus = models.PaymentCompleted
-			h.repo.UpdateRental(rental)
-			log.Printf("[Webhook] Payment completed for rental %s", rental.ID)
-			break
-		}
-	}
-}
-
-// handleSessionExpiry releases the unit when payment session expires
-func (h *PaymentsHandler) handleSessionExpiry(attributes map[string]interface{}) {
-	// Extract session ID or payment ID from attributes
-	// The exact field depends on PayMongo's webhook structure
-	sessionID, ok := attributes["id"].(string)
-	if !ok {
-		return
-	}
-
-	// Find rental by payment/session ID
-	rentals := h.repo.GetAllRentals()
-	for _, rental := range rentals {
-		if rental.PaymentID == sessionID && rental.PaymentStatus == models.PaymentPending {
-			// Release the unit
-			if err := h.allocationManager.ReleaseUnit(rental.CollectibleID, rental.WarehouseID); err != nil {
-				log.Printf("[Webhook] Failed to release unit for expired session: %v", err)
-			}
-
-			// Update rental status
-			rental.PaymentStatus = models.PaymentFailed
-			h.repo.UpdateRental(rental)
-
-			log.Printf("[Webhook] Released unit for expired session: Rental %s", rental.ID)
-			break
-		}
-	}
 }
 
 // PaymentSuccess handles successful payment redirects

@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"errors"
 	"log"
 	"math"
@@ -34,15 +33,11 @@ func NewAllocationManager(inventory []*models.CollectibleUnit, warehouses []mode
 
 // Allocate selects the best available unit for a customer
 // filtering by collectible type and finding the nearest warehouse.
-// rentalID is used to track which rental reserved this unit.
-func (am *AllocationManager) Allocate(collectibleID string, storeID string, rentalID string) (*models.CollectibleUnit, int, error) {
+func (am *AllocationManager) Allocate(collectibleID string, storeID string) (*models.CollectibleUnit, int, error) {
 	am.mu.Lock()
 	defer am.mu.Unlock()
 
-	// First pass: Release expired reservations before searching
-	am.releaseExpiredReservationsUnsafe()
-
-	log.Printf("[Allocation] Starting allocation for Collectible: %s at Store ID: %s (Rental: %s)", collectibleID, storeID, rentalID)
+	log.Printf("[Allocation] Starting allocation for Collectible: %s at Store ID: %s", collectibleID, storeID)
 
 	var bestUnit *models.CollectibleUnit
 	minDistance := math.MaxInt32
@@ -90,33 +85,16 @@ func (am *AllocationManager) Allocate(collectibleID string, storeID string, rent
 		return nil, 0, errors.New("no available units found for the selected collectible")
 	}
 
-	// Reservation: Mark as unavailable and set reservation metadata
-	now := time.Now()
+	// Reservation: Mark as unavailable immediately with timestamp
 	bestUnit.IsAvailable = false
+	now := time.Now()
 	bestUnit.ReservedAt = &now
-	bestUnit.ReservationID = rentalID
-	log.Printf("[Allocation] Success: Allocated Unit %s from Warehouse %s (Distance: %d km, Rental: %s)", bestUnit.ID, bestUnit.WarehouseID, minDistance, rentalID)
+	// reservationID isn't passed here in the current signature, we can add it later or rely on IsAvailable=false + timestamp
+	// Ideally, Allocate should take a reservationID or return one. For now, we rely on the timestamp.
+
+	log.Printf("[Allocation] Success: Allocated Unit %s from Warehouse %s (Distance: %d km)", bestUnit.ID, bestUnit.WarehouseID, minDistance)
 
 	return bestUnit, minDistance, nil
-}
-
-// releaseExpiredReservationsUnsafe releases units with expired reservations
-// Must be called with mutex already locked
-func (am *AllocationManager) releaseExpiredReservationsUnsafe() {
-	const reservationTimeout = 15 * time.Minute
-	cutoff := time.Now().Add(-reservationTimeout)
-
-	for _, unit := range am.inventory {
-		if !unit.IsAvailable && unit.ReservedAt != nil {
-			if unit.ReservedAt.Before(cutoff) {
-				log.Printf("[Allocation] Auto-releasing expired reservation: Unit %s (Reserved at %v, Rental %s)",
-					unit.ID, unit.ReservedAt, unit.ReservationID)
-				unit.IsAvailable = true
-				unit.ReservedAt = nil
-				unit.ReservationID = ""
-			}
-		}
-	}
 }
 
 // GetTotalStock returns the number of available units for a collectible
@@ -181,8 +159,6 @@ func (am *AllocationManager) ReleaseUnit(collectibleID string, warehouseID strin
 	for _, unit := range am.inventory {
 		if unit.CollectibleID == collectibleID && unit.WarehouseID == warehouseID && !unit.IsAvailable {
 			unit.IsAvailable = true
-			unit.ReservedAt = nil
-			unit.ReservationID = ""
 			log.Printf("[Allocation] Released Unit %s from Warehouse %s back to inventory", unit.ID, warehouseID)
 			return nil
 		}
@@ -192,47 +168,37 @@ func (am *AllocationManager) ReleaseUnit(collectibleID string, warehouseID strin
 	return errors.New("unit not found or already available")
 }
 
-// CleanupExpiredReservations releases all units with expired reservations
-func (am *AllocationManager) CleanupExpiredReservations() {
+// CleanupExpiredReservations releases units that have been reserved longer than the timeout
+func (am *AllocationManager) CleanupExpiredReservations(timeout time.Duration) {
 	am.mu.Lock()
 	defer am.mu.Unlock()
 
-	const reservationTimeout = 15 * time.Minute
-	cutoff := time.Now().Add(-reservationTimeout)
-	releasedCount := 0
+	cutoff := time.Now().Add(-timeout)
+	count := 0
 
 	for _, unit := range am.inventory {
 		if !unit.IsAvailable && unit.ReservedAt != nil {
 			if unit.ReservedAt.Before(cutoff) {
-				log.Printf("[Cleanup] Releasing expired reservation: Unit %s (Reserved at %v, Rental %s)",
-					unit.ID, unit.ReservedAt, unit.ReservationID)
 				unit.IsAvailable = true
 				unit.ReservedAt = nil
 				unit.ReservationID = ""
-				releasedCount++
+				count++
+				log.Printf("[Cleanup] Released expired reservation for unit %s", unit.ID)
 			}
 		}
 	}
-
-	if releasedCount > 0 {
-		log.Printf("[Cleanup] Released %d expired reservations", releasedCount)
+	if count > 0 {
+		log.Printf("[Cleanup] Released %d expired reservations", count)
 	}
 }
 
-// StartCleanupJob starts a background goroutine to periodically clean up expired reservations
-func (am *AllocationManager) StartCleanupJob(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
-
-	log.Println("[Allocation] Starting background cleanup job (runs every 5 minutes)")
-
-	for {
-		select {
-		case <-ticker.C:
-			am.CleanupExpiredReservations()
-		case <-ctx.Done():
-			log.Println("[Allocation] Cleanup job stopped")
-			return
+// StartCleanupJob starts a background goroutine to clean up expired reservations
+func (am *AllocationManager) StartCleanupJob(interval time.Duration, timeout time.Duration) {
+	ticker := time.NewTicker(interval)
+	go func() {
+		for range ticker.C {
+			am.CleanupExpiredReservations(timeout)
 		}
-	}
+	}()
+	log.Printf("[Allocation] Started cleanup job (Interval: %v, Timeout: %v)", interval, timeout)
 }

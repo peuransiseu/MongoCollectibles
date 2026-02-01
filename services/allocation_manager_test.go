@@ -28,7 +28,7 @@ func TestAllocationManager_Allocate(t *testing.T) {
 	t.Run("Allocate nearest available", func(t *testing.T) {
 		// Store S1: W2 (dist 5) is closer than W1 (dist 10)
 		// Should pick U2
-		got, _, err := am.Allocate("C1", "S1", "rental-1")
+		got, _, err := am.Allocate("C1", "S1")
 		if err != nil {
 			t.Fatalf("Allocate failed: %v", err)
 		}
@@ -43,17 +43,17 @@ func TestAllocationManager_Allocate(t *testing.T) {
 	t.Run("No available units (all booked or wrong type)", func(t *testing.T) {
 		// Try allocating C2. Only U3 exists.
 		// Let's allocate U3 first to make it unavailable.
-		_, _, _ = am.Allocate("C2", "S1", "rental-2")
+		_, _, _ = am.Allocate("C2", "S1")
 
 		// Now try allocating C2 again
-		_, _, err := am.Allocate("C2", "S1", "rental-3")
+		_, _, err := am.Allocate("C2", "S1")
 		if err == nil {
 			t.Error("Expected error for no available units, got nil")
 		}
 	})
 
 	t.Run("Unknown store ID", func(t *testing.T) {
-		_, _, err := am.Allocate("C1", "UNKNOWN", "rental-4")
+		_, _, err := am.Allocate("C1", "UNKNOWN")
 		if err == nil {
 			t.Error("Expected error for unknown store ID, got nil")
 		}

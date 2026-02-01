@@ -1,8 +1,6 @@
 package models
 
-import (
-	"time"
-)
+import "time"
 
 // CollectibleType represents the abstract product type a customer chooses
 // type CollectibleType struct {
@@ -17,6 +15,6 @@ type CollectibleUnit struct {
 	CollectibleID string // Links to CollectibleType
 	WarehouseID   string // Links to WarehouseNode
 	IsAvailable   bool
-	ReservedAt    *time.Time // When unit was reserved (nil if not reserved)
-	ReservationID string     // Rental ID that reserved this unit
+	ReservedAt    *time.Time
+	ReservationID string
 }
