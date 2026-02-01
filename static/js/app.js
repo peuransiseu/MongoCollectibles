@@ -199,6 +199,15 @@ function openRentalModal(collectibleId) {
     // Populate modal
     document.getElementById('modalTitle').textContent = `Rent ${collectible.name}`;
 
+    // Update size badge in modal
+    const sizeBadge = document.getElementById('modalSizeBadge');
+    if (sizeBadge) {
+        sizeBadge.textContent = collectible.size;
+        // Remove old size classes and add new one
+        sizeBadge.className = 'size-badge'; // Reset to base class
+        sizeBadge.classList.add(`size-${collectible.size.toLowerCase()}`);
+    }
+
     // Reset inputs
     document.getElementById('rentalDuration').value = 7;
 

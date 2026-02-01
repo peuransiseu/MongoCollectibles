@@ -1,14 +1,22 @@
 :root {
-  /* Color Palette */
-  --primary: hsl(260, 80%, 60%);
-  --primary-dark: hsl(260, 80%, 50%);
-  --primary-light: hsl(260, 80%, 70%);
-  --secondary: hsl(200, 80%, 55%);
-  --accent: hsl(320, 70%, 60%);
+  /* Color Palette - Green & Dark Theme */
+  --primary: hsl(140, 70%, 50%);
+  /* Vibrant Green */
+  --primary-dark: hsl(140, 80%, 40%);
+  /* Darker Green */
+  --primary-light: hsl(140, 60%, 60%);
+  /* Lighter Green */
+  --secondary: hsl(140, 50%, 45%);
+  /* Muted Green */
+  --accent: hsl(160, 60%, 55%);
+  /* Teal-ish Green accent */
 
-  --bg-dark: hsl(240, 20%, 10%);
-  --bg-card: hsl(240, 15%, 15%);
-  --bg-card-hover: hsl(240, 15%, 18%);
+  --bg-dark: hsl(220, 15%, 10%);
+  /* Very Dark Blue-Grey */
+  --bg-card: hsl(220, 15%, 16%);
+  /* Slightly lighter card bg */
+  --bg-card-hover: hsl(220, 15%, 20%);
+  /* Hover state */
 
   --text-primary: hsl(0, 0%, 95%);
   --text-secondary: hsl(0, 0%, 70%);
@@ -26,15 +34,17 @@
   --spacing-xl: 3rem;
 
   /* Border Radius */
-  --radius-sm: 0.5rem;
-  --radius-md: 1rem;
-  --radius-lg: 1.5rem;
+  --radius-sm: 4px;
+  /* Sharper corners for a more technical look */
+  --radius-md: 8px;
+  --radius-lg: 12px;
 
   /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(160, 100, 255, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 15px rgba(0, 255, 100, 0.2);
+  /* Green glow */
 
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -50,7 +60,8 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, var(--bg-dark) 0%, hsl(260, 30%, 15%) 100%);
+  background-color: var(--bg-dark);
+  /* Solid background */
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
@@ -58,13 +69,14 @@ body {
 
 /* Header */
 .header {
-  background: rgba(20, 20, 30, 0.8);
+  background: rgba(15, 20, 30, 0.95);
+  /* Solid-ish dark background */
   backdrop-filter: blur(10px);
   padding: var(--spacing-md) var(--spacing-lg);
   position: sticky;
   top: 0;
   z-index: 100;
-  border-bottom: 1px solid rgba(160, 100, 255, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-content {
@@ -78,10 +90,8 @@ body {
 .logo {
   font-size: 1.75rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--primary);
+  /* Solid color */
 }
 
 /* Hero Section */
@@ -93,6 +103,7 @@ body {
   justify-content: center;
   overflow: hidden;
   margin-bottom: var(--spacing-xl);
+  background-color: var(--bg-dark);
 }
 
 .hero-bg {
@@ -102,7 +113,8 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.4;
+  opacity: 0.2;
+  /* Darker overlay */
 }
 
 .hero-content {
@@ -116,17 +128,16 @@ body {
   font-size: 3.5rem;
   font-weight: 800;
   margin-bottom: var(--spacing-sm);
-  background: linear-gradient(135deg, var(--primary-light), var(--secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-shadow: 0 4px 20px rgba(160, 100, 255, 0.5);
+  color: var(--text-primary);
+  /* Solid white */
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
 }
 
 .hero-subtitle {
   font-size: 1.5rem;
-  color: var(--text-secondary);
-  font-weight: 300;
+  color: var(--primary);
+  /* Green accent */
+  font-weight: 400;
 }
 
 /* Container */
@@ -145,11 +156,15 @@ body {
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: var(--spacing-xs);
+  color: var(--text-primary);
+  border-left: 4px solid var(--primary);
+  padding-left: var(--spacing-sm);
 }
 
 .section-subtitle {
   color: var(--text-secondary);
   font-size: 1.1rem;
+  margin-left: calc(var(--spacing-sm) + 4px);
 }
 
 /* Collectibles Grid */
@@ -162,25 +177,29 @@ body {
 
 .collectible-card {
   background: var(--bg-card);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   overflow: hidden;
   transition: all var(--transition-normal);
   cursor: pointer;
-  border: 1px solid rgba(160, 100, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  /* Subtle border */
 }
 
 .collectible-card:hover {
-  transform: translateY(-8px);
-  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  transform: translateY(-4px);
+  /* Less dramatic movement */
+  box-shadow: var(--shadow-md);
   background: var(--bg-card-hover);
-  border-color: rgba(160, 100, 255, 0.3);
+  border-color: var(--primary);
+  /* Green border on hover */
 }
 
 .collectible-image {
   width: 100%;
   height: 250px;
   object-fit: cover;
-  background: linear-gradient(135deg, rgba(160, 100, 255, 0.1), rgba(100, 150, 255, 0.1));
+  background-color: #2a2a2a;
+  /* Solid placeholder color */
 }
 
 .collectible-image-wrapper {
@@ -194,14 +213,15 @@ body {
 .collectible-card.out-of-stock {
   opacity: 0.7;
   cursor: not-allowed;
-  filter: grayscale(40%);
+  filter: grayscale(80%);
+  /* More desaturated */
 }
 
 .collectible-card.out-of-stock:hover {
   transform: none;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   background: var(--bg-card);
-  border-color: rgba(160, 100, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.05);
   opacity: 0.9;
 }
 
@@ -226,7 +246,8 @@ body {
 }
 
 .out-of-stock-badge {
-  background: linear-gradient(135deg, var(--error), hsl(0, 70%, 50%));
+  background-color: var(--error);
+  /* Solid red */
   color: white;
   padding: 0.75rem 1.5rem;
   border-radius: var(--radius-sm);
@@ -234,7 +255,7 @@ body {
   font-size: 1.1rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   transform: scale(0.9);
   transition: transform var(--transition-normal);
 }
@@ -248,11 +269,14 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;
+  background-color: #444;
+  /* Solid disabled color */
+  color: #888;
 }
 
 .btn-primary:disabled,
 .btn-primary[disabled] {
-  background: linear-gradient(135deg, hsl(0, 0%, 40%), hsl(0, 0%, 30%));
+  background: #333;
 }
 
 .collectible-content {
@@ -270,26 +294,36 @@ body {
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: var(--spacing-xs);
+  color: var(--text-primary);
 }
 
 .size-badge {
-  padding: 0.25rem 0.75rem;
+  padding: 0.25rem 0.5rem;
+  /* Smaller padding */
   border-radius: var(--radius-sm);
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 700;
   text-transform: uppercase;
+  border: 1px solid currentColor;
+  /* Outline style */
+  background: transparent;
 }
 
 .size-s {
-  background: linear-gradient(135deg, hsl(140, 60%, 50%), hsl(140, 60%, 40%));
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .size-m {
-  background: linear-gradient(135deg, hsl(200, 70%, 55%), hsl(200, 70%, 45%));
+  color: #4facfe;
+  /* Blue */
+  border-color: #4facfe;
 }
 
 .size-l {
-  background: linear-gradient(135deg, hsl(320, 70%, 60%), hsl(320, 70%, 50%));
+  color: #ff9a9e;
+  /* Pinkish-Red */
+  border-color: #ff9a9e;
 }
 
 .collectible-description {
@@ -310,10 +344,8 @@ body {
 .price {
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--primary-light), var(--accent));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--primary);
+  /* Solid green */
 }
 
 .price-label {
@@ -330,16 +362,21 @@ body {
   cursor: pointer;
   transition: all var(--transition-fast);
   font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white;
+  background-color: var(--primary);
+  /* Solid Green */
+  color: #000;
+  /* Black text on green for high contrast */
 }
 
 .btn-primary:hover {
-  transform: scale(1.05);
-  box-shadow: var(--shadow-md);
+  background-color: var(--primary-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow);
 }
 
 .btn-secondary {
