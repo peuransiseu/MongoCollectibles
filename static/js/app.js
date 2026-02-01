@@ -10,7 +10,6 @@ const API_BASE = '/api';
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
     await loadStores();
-    await loadCollectibles();
     setupEventListeners();
 });
 
@@ -79,7 +78,12 @@ async function loadStores() {
 // Load collectibles from API
 async function loadCollectibles() {
     try {
-        const response = await fetch(`${API_BASE}/collectibles`);
+        let url = `${API_BASE}/collectibles`;
+        if (selectedStore) {
+            url += `?store_id=${selectedStore}`;
+        }
+
+        const response = await fetch(url);
         const data = await response.json();
 
         if (data.success) {
@@ -106,26 +110,38 @@ function displayCollectibles() {
 function createCollectibleCard(collectible) {
     const card = document.createElement('div');
     card.className = 'collectible-card';
+
+    // Determine size class for badge color
+    const sizeClass = `size-${collectible.size.toLowerCase()}`;
+
     card.innerHTML = `
         <div class="collectible-image" style="background-image: url('${collectible.image_url}'); background-size: cover; background-position: center;">
-            <div class="size-badge">${collectible.size}</div>
-            <div class="stock-badge ${collectible.stock > 0 ? 'in-stock' : 'out-of-stock'}">
-                ${collectible.stock > 0 ? `${collectible.stock} in stock` : 'Out of stock'}
-            </div>
+            ${collectible.stock === 0 ? '<div class="out-of-stock-overlay"><div class="out-of-stock-badge">Out of Stock</div></div>' : ''}
         </div>
-        <div class="collectible-info">
-            <h3 class="collectible-name">${collectible.name}</h3>
-            <div class="collectible-meta">
-                <span class="meta-item">📦 ${collectible.size}</span>
-                <span class="meta-item">⏱️ ${collectible.eta_days} days</span>
+        <div class="collectible-content">
+            <div class="collectible-header">
+                <h3 class="collectible-name">${collectible.name}</h3>
+                <div class="size-badge ${sizeClass}">${collectible.size}</div>
             </div>
-            <div class="collectible-footer">
-                <div class="price">₱${collectible.daily_rate}/day</div>
-                <button class="btn btn-primary btn-sm rental-btn" 
-                    data-id="${collectible.id}" 
-                    ${collectible.stock === 0 ? 'disabled' : ''}>
-                    Rent Now
-                </button>
+            <p class="collectible-description">
+                ${collectible.description}
+            </p>
+            <div class="collectible-footer" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                <div class="stock-display ${collectible.stock > 0 ? 'text-success' : 'text-error'}" style="font-size: 0.85rem; font-weight: 600;">
+                    ${collectible.stock > 0 ? `Only ${collectible.stock} left` : 'Out of stock'}
+                </div>
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    <div>
+                        <span class="price-label" style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 2px;">From</span>
+                        <span class="price">₱${collectible.daily_rate}</span>
+                        <span class="price-label" style="display: inline;">/day</span>
+                    </div>
+                    <button class="btn btn-primary btn-sm rental-btn" 
+                        data-id="${collectible.id}" 
+                        ${collectible.stock === 0 ? 'disabled' : ''}>
+                        ${collectible.stock > 0 ? 'Rent Now' : 'Out of Stock'}
+                    </button>
+                </div>
             </div>
         </div>
     `;
@@ -134,6 +150,11 @@ function createCollectibleCard(collectible) {
     const btn = card.querySelector('.rental-btn');
     if (btn && !btn.disabled) {
         btn.addEventListener('click', () => openRentalModal(collectible.id));
+    }
+
+    // Add out of stock class if needed
+    if (collectible.stock === 0) {
+        card.classList.add('out-of-stock');
     }
 
     return card;
@@ -180,7 +201,6 @@ function openRentalModal(collectibleId) {
 
     // Reset inputs
     document.getElementById('rentalDuration').value = 7;
-    if (window.fillDemoData) window.fillDemoData(); // Auto-fill for ease
 
     // Reset Quote UI
     updateQuote(collectible.daily_rate, 7);
@@ -218,7 +238,7 @@ function updateQuote(dailyRate, duration) {
     const etaDays = selectedCollectible ? selectedCollectible.eta_days : 1;
     const etaDate = new Date();
     etaDate.setDate(etaDate.getDate() + etaDays);
-    if (quoteETA) quoteETA.textContent = etaDate.toDateString();
+    if (quoteETA) quoteETA.textContent = `${etaDate.toDateString()} (${etaDays} day${etaDays !== 1 ? 's' : ''})`;
 
     if (specialNotice) {
         specialNotice.style.display = isSpecial ? 'block' : 'none';

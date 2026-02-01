@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -110,6 +111,8 @@ func (h *RentalsHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("[Rental] Processing checkout for Collectible %s at Store %s", req.CollectibleID, req.StoreID)
+
 	// Get collectible
 	collectible, err := h.repo.GetCollectibleByID(req.CollectibleID)
 	if err != nil {
@@ -157,6 +160,8 @@ func (h *RentalsHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 				PaymentURL: rent.PaymentURL,
 				Message:    "Found pending rental. Please complete payment.",
 			}
+
+			log.Printf("[Rental] Resuming pending rental %s", rent.ID)
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
@@ -216,6 +221,8 @@ func (h *RentalsHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
+	log.Printf("[Rental] Created Rental %s (Payment ID: %s)", rentalID, paymentID)
 
 	// Mark warehouse as unavailable
 	// h.allocationManager.Allocate already marked it as unavailable

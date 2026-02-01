@@ -92,6 +92,7 @@ func (am *AllocationManager) Allocate(collectibleID string, storeID string) (*mo
 	// reservationID isn't passed here in the current signature, we can add it later or rely on IsAvailable=false + timestamp
 	// Ideally, Allocate should take a reservationID or return one. For now, we rely on the timestamp.
 
+	log.Printf("[Reservation] Temporary reservation created for Unit %s (Expires in 10m)", bestUnit.ID)
 	log.Printf("[Allocation] Success: Allocated Unit %s from Warehouse %s (Distance: %d km)", bestUnit.ID, bestUnit.WarehouseID, minDistance)
 
 	return bestUnit, minDistance, nil

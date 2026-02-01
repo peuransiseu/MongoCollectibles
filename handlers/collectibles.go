@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 
 	"github.com/gorilla/mux"
 	"github.com/mongocollectibles/rental-system/data"
@@ -27,18 +28,29 @@ func NewCollectiblesHandler(repo *data.Repository, allocationManager *services.A
 func (h *CollectiblesHandler) GetAllCollectibles(w http.ResponseWriter, r *http.Request) {
 	collectibles := h.repo.GetAllCollectibles()
 
-	// Populate dynamic fields (stock and ETA)
-	// Use first store as default for ETA calculation
-	defaultStoreID := "store-a"
+	// Sort collectibles by Name to ensure consistent order
+	sort.Slice(collectibles, func(i, j int) bool {
+		return collectibles[i].Name < collectibles[j].Name
+	})
+
+	// Get store_id from query params, default to "store-a"
+	targetStore := r.URL.Query().Get("store_id")
+	if targetStore == "" {
+		targetStore = "store-a"
+	}
 
 	for _, c := range collectibles {
 		c.Stock = h.allocationManager.GetTotalStock(c.ID)
-		eta, err := h.allocationManager.GetETA(c.ID, defaultStoreID)
+
+		// Calculate ETA logic based on target store
+		// If stock is available locally (distance 0 or handled by logic), ETA is 0 or 1
+		eta, err := h.allocationManager.GetETA(c.ID, targetStore)
 		if err == nil {
 			c.ETADays = eta
 		} else {
 			c.ETADays = 0 // No units available
 		}
+
 		// Set daily rate based on size
 		c.DailyRate = c.Size.GetDailyRate()
 	}
