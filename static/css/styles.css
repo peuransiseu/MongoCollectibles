@@ -5,37 +5,37 @@
   --primary-light: hsl(260, 80%, 70%);
   --secondary: hsl(200, 80%, 55%);
   --accent: hsl(320, 70%, 60%);
-  
+
   --bg-dark: hsl(240, 20%, 10%);
   --bg-card: hsl(240, 15%, 15%);
   --bg-card-hover: hsl(240, 15%, 18%);
-  
+
   --text-primary: hsl(0, 0%, 95%);
   --text-secondary: hsl(0, 0%, 70%);
   --text-muted: hsl(0, 0%, 50%);
-  
+
   --success: hsl(140, 70%, 50%);
   --warning: hsl(40, 90%, 60%);
   --error: hsl(0, 70%, 60%);
-  
+
   /* Spacing */
   --spacing-xs: 0.5rem;
   --spacing-sm: 1rem;
   --spacing-md: 1.5rem;
   --spacing-lg: 2rem;
   --spacing-xl: 3rem;
-  
+
   /* Border Radius */
   --radius-sm: 0.5rem;
   --radius-md: 1rem;
   --radius-lg: 1.5rem;
-  
+
   /* Shadows */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 20px rgba(160, 100, 255, 0.3);
-  
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 300ms ease;
@@ -183,6 +183,78 @@ body {
   background: linear-gradient(135deg, rgba(160, 100, 255, 0.1), rgba(100, 150, 255, 0.1));
 }
 
+.collectible-image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  overflow: hidden;
+}
+
+/* Out of Stock Styles */
+.collectible-card.out-of-stock {
+  opacity: 0.7;
+  cursor: not-allowed;
+  filter: grayscale(40%);
+}
+
+.collectible-card.out-of-stock:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+  background: var(--bg-card);
+  border-color: rgba(160, 100, 255, 0.1);
+  opacity: 0.9;
+}
+
+.out-of-stock-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+  pointer-events: none;
+}
+
+.collectible-card.out-of-stock:hover .out-of-stock-overlay {
+  opacity: 1;
+}
+
+.out-of-stock-badge {
+  background: linear-gradient(135deg, var(--error), hsl(0, 70%, 50%));
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: var(--shadow-md);
+  transform: scale(0.9);
+  transition: transform var(--transition-normal);
+}
+
+.collectible-card.out-of-stock:hover .out-of-stock-badge {
+  transform: scale(1);
+}
+
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-primary:disabled,
+.btn-primary[disabled] {
+  background: linear-gradient(135deg, hsl(0, 0%, 40%), hsl(0, 0%, 30%));
+}
+
 .collectible-content {
   padding: var(--spacing-md);
 }
@@ -208,9 +280,17 @@ body {
   text-transform: uppercase;
 }
 
-.size-s { background: linear-gradient(135deg, hsl(140, 60%, 50%), hsl(140, 60%, 40%)); }
-.size-m { background: linear-gradient(135deg, hsl(200, 70%, 55%), hsl(200, 70%, 45%)); }
-.size-l { background: linear-gradient(135deg, hsl(320, 70%, 60%), hsl(320, 70%, 50%)); }
+.size-s {
+  background: linear-gradient(135deg, hsl(140, 60%, 50%), hsl(140, 60%, 40%));
+}
+
+.size-m {
+  background: linear-gradient(135deg, hsl(200, 70%, 55%), hsl(200, 70%, 45%));
+}
+
+.size-l {
+  background: linear-gradient(135deg, hsl(320, 70%, 60%), hsl(320, 70%, 50%));
+}
 
 .collectible-description {
   color: var(--text-secondary);
@@ -355,31 +435,159 @@ body {
   box-shadow: 0 0 0 3px rgba(160, 100, 255, 0.2);
 }
 
-.payment-methods {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-md);
-}
-
-.payment-method {
-  padding: var(--spacing-md);
-  border-radius: var(--radius-sm);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.05);
+/* Custom Select Dropdown */
+.custom-select {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
   cursor: pointer;
-  transition: all var(--transition-fast);
-  text-align: center;
+  user-select: none;
+  z-index: 50;
+  /* Ensure it stays above other content but below modal */
 }
 
-.payment-method:hover {
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  transition: all var(--transition-normal);
+  backdrop-filter: blur(12px);
+  min-height: 50px;
+}
+
+.select-trigger:hover {
+  background: rgba(255, 255, 255, 0.12);
   border-color: var(--primary-light);
-  background: rgba(160, 100, 255, 0.1);
+  box-shadow: 0 0 15px rgba(160, 100, 255, 0.2);
 }
 
-.payment-method.selected {
+.custom-select.active .select-trigger {
   border-color: var(--primary);
-  background: rgba(160, 100, 255, 0.2);
+  background: rgba(160, 100, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(160, 100, 255, 0.3);
+}
+
+.select-trigger .content {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.select-icon {
+  font-size: 1.2rem;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3));
+}
+
+.selected-text {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.arrow-icon {
+  font-size: 0.7rem;
+  transition: transform var(--transition-normal);
+  opacity: 0.8;
+  margin-left: 0.5rem;
+}
+
+.custom-select.active .arrow-icon {
+  transform: rotate(180deg);
+}
+
+.select-options {
+  position: absolute;
+  top: calc(100% + 0.6rem);
+  left: 0;
+  right: 0;
+  background: hsl(240, 15%, 15%);
+  border: 1px solid rgba(160, 100, 255, 0.3);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px) scale(0.98);
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-lg), 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+.custom-select.active .select-options {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.select-option {
+  padding: 0.9rem 1.25rem;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.select-option:last-child {
+  border-bottom: none;
+}
+
+.select-option:hover {
+  background: rgba(160, 100, 255, 0.25);
+  padding-left: 1.5rem;
+}
+
+.select-option.selected {
+  background: var(--primary);
+  color: white;
+}
+
+.select-option.selected::after {
+  content: '✓';
+  margin-left: auto;
+  font-weight: 700;
+}
+
+.payment-methods-grid {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  margin: 15px 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.payment-icon-item {
+  width: 64px !important;
+  height: 40px !important;
+  background: white !important;
+  border-radius: 4px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 4px !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+img.payment-icon {
+  width: 52px !important;
+  height: 28px !important;
+  min-width: 52px !important;
+  min-height: 28px !important;
+  max-width: 52px !important;
+  max-height: 28px !important;
+  object-fit: contain !important;
+  display: block !important;
 }
 
 .quote-summary {
@@ -426,15 +634,15 @@ body {
   .hero-title {
     font-size: 2.5rem;
   }
-  
+
   .hero-subtitle {
     font-size: 1.2rem;
   }
-  
+
   .collectibles-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .payment-methods {
     grid-template-columns: 1fr;
   }

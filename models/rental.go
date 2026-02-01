@@ -6,11 +6,11 @@ import "time"
 type PaymentMethod string
 
 const (
-	PaymentCard        PaymentMethod = "card"
-	PaymentGCash       PaymentMethod = "gcash"
-	PaymentGrabPay     PaymentMethod = "grabpay"
-	PaymentBPI         PaymentMethod = "bpi"
-	PaymentUBP         PaymentMethod = "ubp"
+	PaymentCard    PaymentMethod = "card"
+	PaymentGCash   PaymentMethod = "gcash"
+	PaymentGrabPay PaymentMethod = "grabpay"
+	PaymentBPI     PaymentMethod = "bpi"
+	PaymentUBP     PaymentMethod = "ubp"
 )
 
 // PaymentStatus represents the current status of a payment
@@ -24,12 +24,12 @@ const (
 
 // Customer represents customer information
 type Customer struct {
-	Name         string `json:"name"`
-	Email        string `json:"email"`
-	Phone        string `json:"phone"`
-	Address      string `json:"address"`
-	City         string `json:"city"`
-	PostalCode   string `json:"postal_code"`
+	Name       string `json:"name"`
+	Email      string `json:"email"`
+	Phone      string `json:"phone"`
+	Address    string `json:"address"`
+	City       string `json:"city"`
+	PostalCode string `json:"postal_code"`
 }
 
 // Rental represents a rental transaction
@@ -47,6 +47,7 @@ type Rental struct {
 	PaymentStatus   PaymentStatus `json:"payment_status"`
 	PaymentID       string        `json:"payment_id"`
 	PaymentURL      string        `json:"payment_url"`
+	ETA             int           `json:"eta"` // in days
 	CreatedAt       time.Time     `json:"created_at"`
 	UpdatedAt       time.Time     `json:"updated_at"`
 }
@@ -54,6 +55,7 @@ type Rental struct {
 // RentalQuoteRequest represents a request for rental fee calculation
 type RentalQuoteRequest struct {
 	CollectibleID string `json:"collectible_id"`
+	StoreID       string `json:"store_id"`
 	Duration      int    `json:"duration"`
 }
 
@@ -66,6 +68,8 @@ type RentalQuoteResponse struct {
 	DailyRate       float64 `json:"daily_rate"`
 	TotalFee        float64 `json:"total_fee"`
 	IsSpecialRate   bool    `json:"is_special_rate"`
+	Stock           int     `json:"stock"`
+	ETA             int     `json:"eta"` // in days
 }
 
 // CheckoutRequest represents a checkout request
@@ -81,6 +85,7 @@ type CheckoutRequest struct {
 type CheckoutResponse struct {
 	RentalID   string  `json:"rental_id"`
 	TotalFee   float64 `json:"total_fee"`
+	ETA        int     `json:"eta"`
 	PaymentURL string  `json:"payment_url"`
 	Message    string  `json:"message"`
 }

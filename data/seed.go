@@ -62,116 +62,172 @@ func SeedData(repo *Repository) {
 		repo.AddCollectible(c)
 	}
 
-	// Seed warehouses with distance tuples
-	// Format: [(distance_to_store_A, distance_to_store_B, distance_to_store_C), ...]
-	
+	// Seed warehouses with distance maps
+	// Format: map[StoreID]distance where StoreID is "store-a", "store-b", "store-c"
+
 	// Batman - 2 warehouses
 	repo.AddWarehouse("col-001", models.Warehouse{
-		ID:                "wh-001-1",
-		Name:              "Warehouse North - Batman",
-		CollectibleID:     "col-001",
-		Available:         true,
-		DistancesToStores: []int{1, 4, 5}, // Distances to stores A, B, C
+		ID:            "wh-001-1",
+		Name:          "Warehouse North - Batman",
+		CollectibleID: "col-001",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 1,
+			"store-b": 4,
+			"store-c": 5,
+		},
 	})
 	repo.AddWarehouse("col-001", models.Warehouse{
-		ID:                "wh-001-2",
-		Name:              "Warehouse South - Batman",
-		CollectibleID:     "col-001",
-		Available:         true,
-		DistancesToStores: []int{3, 2, 3},
+		ID:            "wh-001-2",
+		Name:          "Warehouse South - Batman",
+		CollectibleID: "col-001",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 3,
+			"store-b": 2,
+			"store-c": 3,
+		},
 	})
 
 	// Millennium Falcon - 3 warehouses
 	repo.AddWarehouse("col-002", models.Warehouse{
-		ID:                "wh-002-1",
-		Name:              "Warehouse East - Falcon",
-		CollectibleID:     "col-002",
-		Available:         true,
-		DistancesToStores: []int{2, 1, 4},
+		ID:            "wh-002-1",
+		Name:          "Warehouse East - Falcon",
+		CollectibleID: "col-002",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 2,
+			"store-b": 1,
+			"store-c": 4,
+		},
 	})
 	repo.AddWarehouse("col-002", models.Warehouse{
-		ID:                "wh-002-2",
-		Name:              "Warehouse West - Falcon",
-		CollectibleID:     "col-002",
-		Available:         true,
-		DistancesToStores: []int{5, 3, 2},
+		ID:            "wh-002-2",
+		Name:          "Warehouse West - Falcon",
+		CollectibleID: "col-002",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 5,
+			"store-b": 3,
+			"store-c": 2,
+		},
 	})
 	repo.AddWarehouse("col-002", models.Warehouse{
-		ID:                "wh-002-3",
-		Name:              "Warehouse Central - Falcon",
-		CollectibleID:     "col-002",
-		Available:         true,
-		DistancesToStores: []int{3, 3, 3},
+		ID:            "wh-002-3",
+		Name:          "Warehouse Central - Falcon",
+		CollectibleID: "col-002",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 3,
+			"store-b": 3,
+			"store-c": 3,
+		},
 	})
 
 	// Iron Man Suit - 2 warehouses
 	repo.AddWarehouse("col-003", models.Warehouse{
-		ID:                "wh-003-1",
-		Name:              "Warehouse Premium - Iron Man",
-		CollectibleID:     "col-003",
-		Available:         true,
-		DistancesToStores: []int{4, 2, 1},
+		ID:            "wh-003-1",
+		Name:          "Warehouse Premium - Iron Man",
+		CollectibleID: "col-003",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 4,
+			"store-b": 2,
+			"store-c": 1,
+		},
 	})
 	repo.AddWarehouse("col-003", models.Warehouse{
-		ID:                "wh-003-2",
-		Name:              "Warehouse Secure - Iron Man",
-		CollectibleID:     "col-003",
-		Available:         true,
-		DistancesToStores: []int{2, 5, 4},
+		ID:            "wh-003-2",
+		Name:          "Warehouse Secure - Iron Man",
+		CollectibleID: "col-003",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 2,
+			"store-b": 5,
+			"store-c": 4,
+		},
 	})
 
 	// Pokemon Cards - 3 warehouses
 	repo.AddWarehouse("col-004", models.Warehouse{
-		ID:                "wh-004-1",
-		Name:              "Warehouse A - Pokemon",
-		CollectibleID:     "col-004",
-		Available:         true,
-		DistancesToStores: []int{1, 3, 6},
+		ID:            "wh-004-1",
+		Name:          "Warehouse A - Pokemon",
+		CollectibleID: "col-004",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 1,
+			"store-b": 3,
+			"store-c": 6,
+		},
 	})
 	repo.AddWarehouse("col-004", models.Warehouse{
-		ID:                "wh-004-2",
-		Name:              "Warehouse B - Pokemon",
-		CollectibleID:     "col-004",
-		Available:         true,
-		DistancesToStores: []int{4, 1, 5},
+		ID:            "wh-004-2",
+		Name:          "Warehouse B - Pokemon",
+		CollectibleID: "col-004",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 4,
+			"store-b": 1,
+			"store-c": 5,
+		},
 	})
 	repo.AddWarehouse("col-004", models.Warehouse{
-		ID:                "wh-004-3",
-		Name:              "Warehouse C - Pokemon",
-		CollectibleID:     "col-004",
-		Available:         true,
-		DistancesToStores: []int{6, 5, 1},
+		ID:            "wh-004-3",
+		Name:          "Warehouse C - Pokemon",
+		CollectibleID: "col-004",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 6,
+			"store-b": 5,
+			"store-c": 1,
+		},
 	})
 
 	// Gundam - 2 warehouses
 	repo.AddWarehouse("col-005", models.Warehouse{
-		ID:                "wh-005-1",
-		Name:              "Warehouse Tech - Gundam",
-		CollectibleID:     "col-005",
-		Available:         true,
-		DistancesToStores: []int{3, 4, 2},
+		ID:            "wh-005-1",
+		Name:          "Warehouse Tech - Gundam",
+		CollectibleID: "col-005",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 3,
+			"store-b": 4,
+			"store-c": 2,
+		},
 	})
 	repo.AddWarehouse("col-005", models.Warehouse{
-		ID:                "wh-005-2",
-		Name:              "Warehouse Main - Gundam",
-		CollectibleID:     "col-005",
-		Available:         true,
-		DistancesToStores: []int{2, 2, 5},
+		ID:            "wh-005-2",
+		Name:          "Warehouse Main - Gundam",
+		CollectibleID: "col-005",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 2,
+			"store-b": 2,
+			"store-c": 5,
+		},
 	})
 
 	// Arcade Machine - 2 warehouses
 	repo.AddWarehouse("col-006", models.Warehouse{
-		ID:                "wh-006-1",
-		Name:              "Warehouse Retro - Arcade",
-		CollectibleID:     "col-006",
-		Available:         true,
-		DistancesToStores: []int{5, 1, 3},
+		ID:            "wh-006-1",
+		Name:          "Warehouse Retro - Arcade",
+		CollectibleID: "col-006",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 5,
+			"store-b": 1,
+			"store-c": 3,
+		},
 	})
 	repo.AddWarehouse("col-006", models.Warehouse{
-		ID:                "wh-006-2",
-		Name:              "Warehouse Gaming - Arcade",
-		CollectibleID:     "col-006",
-		Available:         true,
-		DistancesToStores: []int{1, 6, 2},
+		ID:            "wh-006-2",
+		Name:          "Warehouse Gaming - Arcade",
+		CollectibleID: "col-006",
+		Available:     true,
+		Distances: map[string]int{
+			"store-a": 1,
+			"store-b": 6,
+			"store-c": 2,
+		},
 	})
 }

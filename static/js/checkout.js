@@ -1,17 +1,24 @@
 // Checkout functionality
 
-// Handle checkout button click
-document.getElementById('checkoutBtn').addEventListener('click', handleCheckout);
+// Handle checkout button click (only if it exists)
+const proceedBtn = document.getElementById('proceedToPaymentBtn');
+if (proceedBtn) {
+    proceedBtn.addEventListener('click', handleCheckout);
+}
 
 async function handleCheckout() {
-    // Validate form
+    console.log("Handle Checkout Started - v2");
+
+    // 1. Validate form fields first
     if (!validateCheckoutForm()) {
+        console.log("Validation failed");
         return;
     }
+    console.log("Validation passed");
 
-    // Get form data
-    const duration = parseInt(document.getElementById('rentalDuration').value);
-    const paymentMethod = document.querySelector('.payment-method.selected')?.getAttribute('data-method');
+    // 2. Collect only what we need
+    const durationInput = document.getElementById('rentalDuration');
+    const duration = parseInt(durationInput.value);
 
     const customer = {
         name: document.getElementById('customerName').value.trim(),
@@ -22,105 +29,104 @@ async function handleCheckout() {
         postal_code: document.getElementById('customerPostal').value.trim()
     };
 
-    // Prepare checkout request
+    // 3. Prepare data - we MUST include payment_method for the API
     const checkoutData = {
         collectible_id: selectedCollectible.id,
         store_id: selectedStore,
         duration: duration,
-        payment_method: paymentMethod,
+        payment_method: "external",
         customer: customer
     };
 
-    // Disable button and show loading
-    const checkoutBtn = document.getElementById('checkoutBtn');
-    const originalText = checkoutBtn.textContent;
-    checkoutBtn.disabled = true;
-    checkoutBtn.textContent = 'Processing...';
+    // 4. Update UI to show processing
+    const proceedBtn = document.getElementById('proceedToPaymentBtn');
+    const originalText = proceedBtn.textContent;
+    proceedBtn.disabled = true;
+    proceedBtn.textContent = 'Preparing Payment...';
 
     try {
         const response = await fetch(`${API_BASE}/rentals/checkout`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(checkoutData)
         });
 
         const data = await response.json();
 
-        if (data.success) {
-            // Redirect to PayMongo payment page
+        if (data.success && data.data.payment_url) {
+            // Successfully got the PayMongo session URL
             window.location.href = data.data.payment_url;
         } else {
-            alert(`Checkout failed: ${data.error || 'Unknown error'}`);
-            checkoutBtn.disabled = false;
-            checkoutBtn.textContent = originalText;
+            console.error('API Error:', data);
+            alert(`Checkout Error: ${data.error || 'The server encountered an issue. Please try again.'}`);
+            proceedBtn.disabled = false;
+            proceedBtn.textContent = originalText;
         }
     } catch (error) {
-        console.error('Checkout error:', error);
-        alert('An error occurred during checkout. Please try again.');
-        checkoutBtn.disabled = false;
-        checkoutBtn.textContent = originalText;
+        console.error('Network/System Error:', error);
+        alert('Could not connect to the payment server. Please check your connection.');
+        proceedBtn.disabled = false;
+        proceedBtn.textContent = originalText;
     }
 }
 
 // Validate checkout form
 function validateCheckoutForm() {
     // Check duration
-    const duration = parseInt(document.getElementById('rentalDuration').value);
+    const durationInput = document.getElementById('rentalDuration');
+    const duration = parseInt(durationInput.value);
     if (!duration || duration < 1) {
         alert('Please enter a valid rental duration (minimum 1 day)');
-        document.getElementById('rentalDuration').focus();
-        return false;
-    }
-
-    // Check payment method
-    const paymentMethod = document.querySelector('.payment-method.selected');
-    if (!paymentMethod) {
-        alert('Please select a payment method');
+        durationInput.focus();
         return false;
     }
 
     // Check customer details
-    const name = document.getElementById('customerName').value.trim();
+    const nameInput = document.getElementById('customerName');
+    const name = nameInput.value.trim();
     if (!name) {
         alert('Please enter your full name');
-        document.getElementById('customerName').focus();
+        nameInput.focus();
         return false;
     }
 
-    const email = document.getElementById('customerEmail').value.trim();
+    const emailInput = document.getElementById('customerEmail');
+    const email = emailInput.value.trim();
     if (!email || !isValidEmail(email)) {
         alert('Please enter a valid email address');
-        document.getElementById('customerEmail').focus();
+        emailInput.focus();
         return false;
     }
 
-    const phone = document.getElementById('customerPhone').value.trim();
+    const phoneInput = document.getElementById('customerPhone');
+    const phone = phoneInput.value.trim();
     if (!phone) {
         alert('Please enter your phone number');
-        document.getElementById('customerPhone').focus();
+        phoneInput.focus();
         return false;
     }
 
-    const address = document.getElementById('customerAddress').value.trim();
+    const addressInput = document.getElementById('customerAddress');
+    const address = addressInput.value.trim();
     if (!address) {
         alert('Please enter your address');
-        document.getElementById('customerAddress').focus();
+        addressInput.focus();
         return false;
     }
 
-    const city = document.getElementById('customerCity').value.trim();
+    const cityInput = document.getElementById('customerCity');
+    const city = cityInput.value.trim();
     if (!city) {
         alert('Please enter your city');
-        document.getElementById('customerCity').focus();
+        cityInput.focus();
         return false;
     }
 
-    const postal = document.getElementById('customerPostal').value.trim();
+    const postalInput = document.getElementById('customerPostal');
+    const postal = postalInput.value.trim();
     if (!postal) {
         alert('Please enter your postal code');
-        document.getElementById('customerPostal').focus();
+        postalInput.focus();
         return false;
     }
 

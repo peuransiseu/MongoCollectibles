@@ -40,6 +40,8 @@ type PayMongoSessionAttributes struct {
 	LineItems          []PayMongoLineItem `json:"line_items"`
 	PaymentMethodTypes []string           `json:"payment_method_types"`
 	Description        string             `json:"description"`
+	SuccessUrl         string             `json:"success_url,omitempty"`
+	CancelUrl          string             `json:"cancel_url,omitempty"`
 	SendEmailReceipt   bool               `json:"send_email_receipt"`
 	ShowDescription    bool               `json:"show_description"`
 	ShowLineItems      bool               `json:"show_line_items"`
@@ -83,11 +85,13 @@ func (s *PaymentService) CreateCheckoutSession(amount float64, rentalID string, 
 						Quantity: 1,
 					},
 				},
-				PaymentMethodTypes: []string{"qrph", "gcash", "paymaya", "card", "grab_pay"},
+				PaymentMethodTypes: []string{"qrph", "gcash", "paymaya", "card", "grab_pay", "dob", "dob_ubp"},
 				Description:        fmt.Sprintf("Rental for %s (%d days)", collectibleName, duration),
 				SendEmailReceipt:   false,
 				ShowDescription:    true,
 				ShowLineItems:      true,
+				SuccessUrl:         fmt.Sprintf("http://localhost:8080/payment/success?rental_id=%s", rentalID),
+				CancelUrl:          fmt.Sprintf("http://localhost:8080/payment/failed?rental_id=%s", rentalID),
 			},
 		},
 	}

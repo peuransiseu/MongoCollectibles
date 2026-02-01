@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/mongocollectibles/rental-system/config"
 	"github.com/mongocollectibles/rental-system/data"
 	"github.com/mongocollectibles/rental-system/handlers"
+	"github.com/mongocollectibles/rental-system/models"
 	"github.com/mongocollectibles/rental-system/services"
 )
 
@@ -21,29 +23,95 @@ func main() {
 
 	// Initialize services
 	pricingService := services.NewPricingService()
-	allocationService := services.NewAllocationService()
-	allocationService.SetWarehouses(repo.GetAllWarehouses())
+
+	// Bridge: Transform legacy data for new AllocationManager
+	log.Println("Initializing AllocationManager with warehouse data...")
+	allWarehouses := repo.GetAllWarehouses()
+	var newInventory []*models.CollectibleUnit
+	var newDistances []models.WarehouseNode
+	seenWarehouses := make(map[string]bool)
+
+	for collectibleID, warehouseList := range allWarehouses {
+		for _, wh := range warehouseList {
+			// Create Unit
+			unit := &models.CollectibleUnit{
+				ID:            wh.ID, // Assuming Unit ID = Warehouse ID for legacy
+				CollectibleID: collectibleID,
+				WarehouseID:   wh.ID,
+				IsAvailable:   wh.Available,
+			}
+			newInventory = append(newInventory, unit)
+
+			// Create Warehouse Node (Physical)
+			if !seenWarehouses[wh.ID] {
+				// Use the Distances map directly from the warehouse data
+				node := models.WarehouseNode{
+					ID:        wh.ID,
+					Distances: wh.Distances,
+				}
+				newDistances = append(newDistances, node)
+				seenWarehouses[wh.ID] = true
+			}
+		}
+	}
+
+	allocationManager := services.NewAllocationManager(newInventory, newDistances)
+
+	// Start background cleanup job for expired reservations
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go allocationManager.StartCleanupJob(ctx)
+
 	paymentService := services.NewPaymentService(cfg.PayMongoSecretKey, cfg.PayMongoPublicKey)
 
+	// Initialize auth service and handlers
+	authService := services.NewAuthService()
+	authHandler := handlers.NewAuthHandler(repo, authService)
+	cartHandler := handlers.NewCartHandler(repo, authHandler)
+
+	// Initialize order and refund services
+	orderService := services.NewOrderService(allocationManager)
+	refundService := services.NewRefundService(repo)
+	orderHandler := handlers.NewOrderHandler(repo, authHandler, orderService, refundService)
+
 	// Initialize handlers
-	collectiblesHandler := handlers.NewCollectiblesHandler(repo)
-	rentalsHandler := handlers.NewRentalsHandler(repo, pricingService, allocationService, paymentService, cfg)
-	paymentsHandler := handlers.NewPaymentsHandler(repo, paymentService)
+	collectiblesHandler := handlers.NewCollectiblesHandler(repo, allocationManager)
+	rentalsHandler := handlers.NewRentalsHandler(repo, pricingService, allocationManager, paymentService, cfg, authHandler)
+	paymentsHandler := handlers.NewPaymentsHandler(repo, paymentService, allocationManager)
 
 	// Setup router
 	router := mux.NewRouter()
 
 	// API routes
 	api := router.PathPrefix("/api").Subrouter()
-	
+
+	// Auth endpoints
+	api.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
+	api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
+	api.HandleFunc("/auth/logout", authHandler.Logout).Methods("POST")
+
+	// Cart endpoints (require auth)
+	api.HandleFunc("/cart", cartHandler.GetCart).Methods("GET")
+	api.HandleFunc("/cart/items", cartHandler.AddToCart).Methods("POST")
+	api.HandleFunc("/cart/items/{collectible_id}", cartHandler.UpdateCartItem).Methods("PUT")
+	api.HandleFunc("/cart/items/{collectible_id}", cartHandler.RemoveFromCart).Methods("DELETE")
+	api.HandleFunc("/cart", cartHandler.ClearCart).Methods("DELETE")
+
 	// Collectibles endpoints
 	api.HandleFunc("/collectibles", collectiblesHandler.GetAllCollectibles).Methods("GET")
 	api.HandleFunc("/collectibles/{id}", collectiblesHandler.GetCollectibleByID).Methods("GET")
-	
+
 	// Rentals endpoints
 	api.HandleFunc("/rentals/quote", rentalsHandler.GetQuote).Methods("POST")
 	api.HandleFunc("/rentals/checkout", rentalsHandler.Checkout).Methods("POST")
-	
+	api.HandleFunc("/checkout", rentalsHandler.CheckoutFromCart).Methods("POST") // NEW: Checkout from cart
+
+	// Order endpoints (require auth)
+	api.HandleFunc("/orders", orderHandler.GetOrders).Methods("GET")
+	api.HandleFunc("/orders/{id}", orderHandler.GetOrderByID).Methods("GET")
+	api.HandleFunc("/orders/{id}/cancel", orderHandler.CancelOrder).Methods("POST")
+	api.HandleFunc("/orders/{id}/refund", orderHandler.GetRefundStatus).Methods("GET")
+
 	// Payment endpoints
 	api.HandleFunc("/webhooks/paymongo", paymentsHandler.WebhookPayMongo).Methods("POST")
 	router.HandleFunc("/payment/success", paymentsHandler.PaymentSuccess).Methods("GET")

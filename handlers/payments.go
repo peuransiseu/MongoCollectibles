@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/mongocollectibles/rental-system/data"
@@ -11,15 +12,17 @@ import (
 
 // PaymentsHandler handles payment webhooks and callbacks
 type PaymentsHandler struct {
-	repo           *data.Repository
-	paymentService *services.PaymentService
+	repo              *data.Repository
+	paymentService    *services.PaymentService
+	allocationManager *services.AllocationManager
 }
 
 // NewPaymentsHandler creates a new payments handler
-func NewPaymentsHandler(repo *data.Repository, paymentService *services.PaymentService) *PaymentsHandler {
+func NewPaymentsHandler(repo *data.Repository, paymentService *services.PaymentService, allocationManager *services.AllocationManager) *PaymentsHandler {
 	return &PaymentsHandler{
-		repo:           repo,
-		paymentService: paymentService,
+		repo:              repo,
+		paymentService:    paymentService,
+		allocationManager: allocationManager,
 	}
 }
 
@@ -31,8 +34,7 @@ func (h *PaymentsHandler) WebhookPayMongo(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Extract payment ID from webhook
-	// Note: Actual webhook structure may vary, this is a simplified version
+	// Extract event type
 	data, ok := webhookData["data"].(map[string]interface{})
 	if !ok {
 		w.WriteHeader(http.StatusOK)
@@ -45,36 +47,94 @@ func (h *PaymentsHandler) WebhookPayMongo(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	paymentID, ok := attributes["id"].(string)
-	if !ok {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
+	// Check event type
+	eventType, _ := attributes["type"].(string)
 
-	// Verify payment status
-	status, err := h.paymentService.VerifyPayment(paymentID)
-	if err != nil {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
+	switch eventType {
+	case "checkout_session.payment.paid":
+		// Handle successful payment
+		h.handlePaymentSuccess(attributes)
 
-	// Update rental status based on payment
-	rentals := h.repo.GetAllRentals()
-	for _, rental := range rentals {
-		if rental.PaymentID == paymentID {
-			rental.PaymentStatus = status
-			h.repo.UpdateRental(rental)
-			break
+	case "checkout_session.expired":
+		// Handle session expiry - release the unit
+		h.handleSessionExpiry(attributes)
+
+	default:
+		// For backward compatibility, try to extract payment ID
+		paymentID, ok := attributes["id"].(string)
+		if ok {
+			// Verify payment status
+			status, err := h.paymentService.VerifyPayment(paymentID)
+			if err != nil {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			// Update rental status based on payment
+			rentals := h.repo.GetAllRentals()
+			for _, rental := range rentals {
+				if rental.PaymentID == paymentID {
+					rental.PaymentStatus = status
+					h.repo.UpdateRental(rental)
+					break
+				}
+			}
 		}
 	}
 
 	w.WriteHeader(http.StatusOK)
 }
 
+// handlePaymentSuccess processes successful payment webhook events
+func (h *PaymentsHandler) handlePaymentSuccess(attributes map[string]interface{}) {
+	paymentID, ok := attributes["id"].(string)
+	if !ok {
+		return
+	}
+
+	rentals := h.repo.GetAllRentals()
+	for _, rental := range rentals {
+		if rental.PaymentID == paymentID {
+			rental.PaymentStatus = models.PaymentCompleted
+			h.repo.UpdateRental(rental)
+			log.Printf("[Webhook] Payment completed for rental %s", rental.ID)
+			break
+		}
+	}
+}
+
+// handleSessionExpiry releases the unit when payment session expires
+func (h *PaymentsHandler) handleSessionExpiry(attributes map[string]interface{}) {
+	// Extract session ID or payment ID from attributes
+	// The exact field depends on PayMongo's webhook structure
+	sessionID, ok := attributes["id"].(string)
+	if !ok {
+		return
+	}
+
+	// Find rental by payment/session ID
+	rentals := h.repo.GetAllRentals()
+	for _, rental := range rentals {
+		if rental.PaymentID == sessionID && rental.PaymentStatus == models.PaymentPending {
+			// Release the unit
+			if err := h.allocationManager.ReleaseUnit(rental.CollectibleID, rental.WarehouseID); err != nil {
+				log.Printf("[Webhook] Failed to release unit for expired session: %v", err)
+			}
+
+			// Update rental status
+			rental.PaymentStatus = models.PaymentFailed
+			h.repo.UpdateRental(rental)
+
+			log.Printf("[Webhook] Released unit for expired session: Rental %s", rental.ID)
+			break
+		}
+	}
+}
+
 // PaymentSuccess handles successful payment redirects
 func (h *PaymentsHandler) PaymentSuccess(w http.ResponseWriter, r *http.Request) {
 	rentalID := r.URL.Query().Get("rental_id")
-	
+
 	rental, err := h.repo.GetRentalByID(rentalID)
 	if err != nil {
 		http.Error(w, "Rental not found", http.StatusNotFound)
@@ -91,11 +151,17 @@ func (h *PaymentsHandler) PaymentSuccess(w http.ResponseWriter, r *http.Request)
 // PaymentFailed handles failed payment redirects
 func (h *PaymentsHandler) PaymentFailed(w http.ResponseWriter, r *http.Request) {
 	rentalID := r.URL.Query().Get("rental_id")
-	
+
 	rental, err := h.repo.GetRentalByID(rentalID)
 	if err != nil {
 		http.Error(w, "Rental not found", http.StatusNotFound)
 		return
+	}
+
+	// Release the allocated unit back to inventory
+	if err := h.allocationManager.ReleaseUnit(rental.CollectibleID, rental.WarehouseID); err != nil {
+		// Log the error but continue - we still want to update the rental status
+		// The unit might have already been released or not found
 	}
 
 	rental.PaymentStatus = models.PaymentFailed
