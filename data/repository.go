@@ -7,17 +7,17 @@ import (
 	"github.com/mongocollectibles/rental-system/models"
 )
 
-// Repository handles in-memory data storage
-type Repository struct {
+// InMemoryRepository handles in-memory data storage
+type InMemoryRepository struct {
 	collectibles map[string]*models.Collectible
 	rentals      map[string]*models.Rental
 	warehouses   map[string][]models.Warehouse // collectibleID -> warehouses
 	mu           sync.RWMutex
 }
 
-// NewRepository creates a new repository instance
-func NewRepository() *Repository {
-	return &Repository{
+// NewRepository creates a new in-memory repository instance
+func NewRepository() *InMemoryRepository {
+	return &InMemoryRepository{
 		collectibles: make(map[string]*models.Collectible),
 		rentals:      make(map[string]*models.Rental),
 		warehouses:   make(map[string][]models.Warehouse),
@@ -25,7 +25,7 @@ func NewRepository() *Repository {
 }
 
 // GetAllCollectibles returns all collectibles
-func (r *Repository) GetAllCollectibles() []*models.Collectible {
+func (r *InMemoryRepository) GetAllCollectibles() ([]*models.Collectible, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -33,11 +33,11 @@ func (r *Repository) GetAllCollectibles() []*models.Collectible {
 	for _, c := range r.collectibles {
 		collectibles = append(collectibles, c)
 	}
-	return collectibles
+	return collectibles, nil
 }
 
 // GetCollectibleByID returns a collectible by ID
-func (r *Repository) GetCollectibleByID(id string) (*models.Collectible, error) {
+func (r *InMemoryRepository) GetCollectibleByID(id string) (*models.Collectible, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -49,14 +49,15 @@ func (r *Repository) GetCollectibleByID(id string) (*models.Collectible, error) 
 }
 
 // AddCollectible adds a new collectible
-func (r *Repository) AddCollectible(collectible *models.Collectible) {
+func (r *InMemoryRepository) AddCollectible(collectible *models.Collectible) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.collectibles[collectible.ID] = collectible
+	return nil
 }
 
 // GetWarehouses returns warehouses for a collectible
-func (r *Repository) GetWarehouses(collectibleID string) ([]models.Warehouse, error) {
+func (r *InMemoryRepository) GetWarehouses(collectibleID string) ([]models.Warehouse, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -68,21 +69,22 @@ func (r *Repository) GetWarehouses(collectibleID string) ([]models.Warehouse, er
 }
 
 // AddWarehouse adds a warehouse for a collectible
-func (r *Repository) AddWarehouse(collectibleID string, warehouse models.Warehouse) {
+func (r *InMemoryRepository) AddWarehouse(collectibleID string, warehouse models.Warehouse) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.warehouses[collectibleID] = append(r.warehouses[collectibleID], warehouse)
+	return nil
 }
 
 // GetAllWarehouses returns all warehouses (for allocation service)
-func (r *Repository) GetAllWarehouses() map[string][]models.Warehouse {
+func (r *InMemoryRepository) GetAllWarehouses() (map[string][]models.Warehouse, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return r.warehouses
+	return r.warehouses, nil
 }
 
 // CreateRental creates a new rental record
-func (r *Repository) CreateRental(rental *models.Rental) error {
+func (r *InMemoryRepository) CreateRental(rental *models.Rental) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -95,7 +97,7 @@ func (r *Repository) CreateRental(rental *models.Rental) error {
 }
 
 // GetRentalByID returns a rental by ID
-func (r *Repository) GetRentalByID(id string) (*models.Rental, error) {
+func (r *InMemoryRepository) GetRentalByID(id string) (*models.Rental, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -107,7 +109,7 @@ func (r *Repository) GetRentalByID(id string) (*models.Rental, error) {
 }
 
 // UpdateRental updates an existing rental
-func (r *Repository) UpdateRental(rental *models.Rental) error {
+func (r *InMemoryRepository) UpdateRental(rental *models.Rental) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -120,7 +122,7 @@ func (r *Repository) UpdateRental(rental *models.Rental) error {
 }
 
 // GetAllRentals returns all rentals
-func (r *Repository) GetAllRentals() []*models.Rental {
+func (r *InMemoryRepository) GetAllRentals() ([]*models.Rental, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -128,5 +130,27 @@ func (r *Repository) GetAllRentals() []*models.Rental {
 	for _, r := range r.rentals {
 		rentals = append(rentals, r)
 	}
-	return rentals
+	return rentals, nil
+}
+
+// GetRentalsByCustomerAndCollectible returns rentals for a specific customer and collectible
+func (r *InMemoryRepository) GetRentalsByCustomerAndCollectible(email string, collectibleID string) ([]*models.Rental, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var matches []*models.Rental
+	for _, rental := range r.rentals {
+		if rental.Customer.Email == email && rental.CollectibleID == collectibleID {
+			matches = append(matches, rental)
+		}
+	}
+	return matches, nil
+}
+
+// DeleteAllRentals clears all rental records
+func (r *InMemoryRepository) DeleteAllRentals() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.rentals = make(map[string]*models.Rental)
+	return nil
 }

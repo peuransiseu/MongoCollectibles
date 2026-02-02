@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MongoCollectibles Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #22c55e;
+            /* Green */
+            --danger: #ef4444;
+            --warning: #eab308;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .badge {
+            background: var(--accent);
+            color: #000;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #334155;
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-available {
+            color: var(--accent);
+        }
+
+        .status-reserved {
+            color: var(--warning);
+        }
+
+        .status-paid {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .status-pending {
+            color: var(--warning);
+        }
+
+        .status-failed {
+            color: var(--danger);
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 20px;
+        }
+
+        .filters {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            background: #334155;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            color: white;
+        }
+
+        <style>
+
+        /* ... previous styles ... */
+        .clickable-id {
+            color: var(--accent);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .clickable-id:hover {
+            opacity: 0.8;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-content {
+            background-color: var(--bg-card);
+            margin: 10% auto;
+            padding: 30px;
+            border: 1px solid #334155;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+            color: var(--text-primary);
+            position: relative;
+        }
+
+        .close {
+            color: var(--text-secondary);
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: var(--text-primary);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #334155;
+        }
+
+        .detail-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .section-title {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: var(--accent);
+            font-size: 1.1rem;
+            border-bottom: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- ... header ... -->
+        <header>
+            <div style="display:flex; align-items:center; gap: 15px;">
+                <h1>Logistics Dashboard</h1>
+                <span class="badge">ADMIN</span>
+            </div>
+            <div id="last-updated" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
+        </header>
+
+        <div class="grid">
+            <!-- Inventory -->
+            <div class="card">
+                <h2>Warehouse Inventory</h2>
+                <div class="filters">
+                    <input type="text" id="inventory-search" placeholder="Search item..." onkeyup="filterInventory()">
+                </div>
+                <div id="inventory-container">
+                    <table id="inventory-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Warehouse</th>
+                                <th>Status</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- JS will populate -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Orders -->
+            <div class="card">
+                <h2>Recent Orders</h2>
+                <div class="filters">
+                    <input type="text" id="order-search" placeholder="Search order..." onkeyup="filterOrders()">
+                </div>
+                <div id="orders-container">
+                    <table id="orders-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Customer</th>
+                                <th>Item</th>
+                                <th>Status</th>
+                                <th>ETA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- JS will populate -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modal-title">Order Details</h2>
+            <div id="modal-body">
+                <!-- Content will be injected -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ... previous script ...
+        const API_URL = '/admin/dashboard/api';
+
+        async function fetchDashboard() {
+            try {
+                const res = await fetch(API_URL);
+                if (!res.ok) throw new Error('Failed to fetch');
+                const data = await res.json();
+                render(data);
+                document.getElementById('last-updated').innerText = 'Synced: ' + new Date().toLocaleTimeString();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        let currentData = null;
+
+        function render(data) {
+            currentData = data;
+            const inventoryWithNames = data.inventory.map(item => ({
+                ...item,
+                name: data.collectibles[item.collectible_id] || item.collectible_id
+            }));
+
+            renderInventory(inventoryWithNames);
+            renderOrders(data.rentals);
+        }
+
+        function renderInventory(items) {
+            const tbody = document.querySelector('#inventory-table tbody');
+            tbody.innerHTML = items.map(item => `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>${item.warehouse_id}</td>
+                    <td class="${item.is_available ? 'status-available' : 'status-reserved'}">
+                        ${item.is_available ? 'Available' : 'Reserved'}
+                    </td>
+                    <td>${item.reserved_at ? new Date(item.reserved_at).toLocaleTimeString() : '-'}</td>
+                </tr>
+             `).join('');
+        }
+
+        function renderOrders(rentals) {
+            //Sort by newest first
+            rentals.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            const tbody = document.querySelector('#orders-table tbody');
+            tbody.innerHTML = rentals.map(r => `
+                <tr>
+                    <td class="clickable-id" onclick="showDetails('${r.id}')" title="View Billing Details">${r.id.substring(0, 8)}...</td>
+                    <td>${r.customer.name}</td>
+                    <td>${r.collectible_name}</td>
+                    <td class="status-${r.payment_status.toLowerCase()}">${r.payment_status}</td>
+                    <td>${r.eta} days</td>
+                </tr>
+            `).join('');
+        }
+
+        function showDetails(rentalID) {
+            if (!currentData) return;
+            const rental = currentData.rentals.find(r => r.id === rentalID);
+            if (!rental) return;
+
+            const modal = document.getElementById('detailsModal');
+            const body = document.getElementById('modal-body');
+
+            // Format currency
+            const formatMoney = (amount) => 'PHP ' + amount.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+            body.innerHTML = `
+                <div class="detail-row section-title">Customer Information</div>
+                <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value">${rental.customer.name}</span></div>
+                <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">${rental.customer.email}</span></div>
+                <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value">${rental.customer.phone}</span></div>
+                
+                <div class="detail-row section-title">Billing Details</div>
+                <div class="detail-row"><span class="detail-label">Warehouse ID</span><span class="detail-value">${rental.warehouse_id}</span></div>
+                <div class="detail-row"><span class="detail-label">Store ID</span><span class="detail-value">${rental.store_id}</span></div>
+                <div class="detail-row"><span class="detail-label">Payment Method</span><span class="detail-value">${rental.payment_method ? rental.payment_method.toUpperCase() : 'N/A'}</span></div>
+                <div class="detail-row"><span class="detail-label">Daily Rate</span><span class="detail-value">${formatMoney(rental.daily_rate)}</span></div>
+                <div class="detail-row"><span class="detail-label">Duration</span><span class="detail-value">${rental.duration} Days</span></div>
+                <div class="detail-row"><span class="detail-label">Total Fee</span><span class="detail-value" style="color: var(--accent); font-size: 1.2em;">${formatMoney(rental.total_fee)}</span></div>
+                <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value status-${rental.payment_status}">${rental.payment_status.toUpperCase()}</span></div>
+                <div class="detail-row"><span class="detail-label">Payment ID</span><span class="detail-value" style="font-size: 0.8em;">${rental.payment_id || 'N/A'}</span></div>
+            `;
+
+            modal.style.display = "block";
+        }
+
+        function closeModal() {
+            document.getElementById('detailsModal').style.display = "none";
+        }
+
+        // Close on outside click
+        window.onclick = function (event) {
+            const modal = document.getElementById('detailsModal');
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        // Auto refresh
+        fetchDashboard();
+        setInterval(fetchDashboard, 5000);
+
+        function filterInventory() {
+            if (!currentData) return;
+            const term = document.getElementById('inventory-search').value.toLowerCase();
+            const filtered = currentData.inventory.map(item => ({
+                ...item,
+                name: currentData.collectibles[item.collectible_id] || item.collectible_id
+            })).filter(i => i.name.toLowerCase().includes(term) || i.warehouse_id.toLowerCase().includes(term));
+
+            renderInventory(filtered);
+        }
+
+        function filterOrders() {
+            if (!currentData) return;
+            const term = document.getElementById('order-search').value.toLowerCase();
+            const filtered = currentData.rentals.filter(r =>
+                r.customer.name.toLowerCase().includes(term) ||
+                r.collectible_name.toLowerCase().includes(term) ||
+                r.payment_status.toLowerCase().includes(term)
+            );
+
+            renderOrders(filtered);
+        }
+    </script>
+</body>
+
+</html>

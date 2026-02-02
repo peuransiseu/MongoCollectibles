@@ -16,6 +16,7 @@
 
 # Dependency directories
 vendor/
+docs/
 
 # IDE specific files
 .vscode/

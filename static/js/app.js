@@ -10,33 +10,66 @@ const API_BASE = '/api';
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
     await loadStores();
-    await loadCollectibles();
     setupEventListeners();
 });
+
+// UI Helper: Show Notification
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 2rem;
+        right: 2rem;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
 
 // Load stores from config
 async function loadStores() {
     try {
-        // For now, hardcode stores (in production, fetch from API)
         stores = [
             { id: 'store-a', name: 'MongoCollectibles Store A - Manila' },
             { id: 'store-b', name: 'MongoCollectibles Store B - Quezon City' },
             { id: 'store-c', name: 'MongoCollectibles Store C - Makati' }
         ];
 
-        const storeSelect = document.getElementById('storeSelect');
-        storeSelect.innerHTML = '<option value="">Select a store...</option>';
-        
+        const storeOptions = document.getElementById('storeOptions');
+
+        storeOptions.innerHTML = '';
+
         stores.forEach(store => {
-            const option = document.createElement('option');
-            option.value = store.id;
-            option.textContent = store.name;
-            storeSelect.appendChild(option);
+            const option = document.createElement('div');
+            option.className = 'select-option';
+            option.dataset.value = store.id;
+            option.innerHTML = `
+                <span class="select-icon">📍</span>
+                <span>${store.name}</span>
+            `;
+
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectStore(store.id);
+            });
+
+            storeOptions.appendChild(option);
         });
 
-        // Set default store
-        storeSelect.value = stores[0].id;
-        selectedStore = stores[0].id;
+        if (stores.length > 0) {
+            selectStore(stores[0].id);
+        }
     } catch (error) {
         console.error('Error loading stores:', error);
     }
@@ -45,228 +78,295 @@ async function loadStores() {
 // Load collectibles from API
 async function loadCollectibles() {
     try {
-        const response = await fetch(`${API_BASE}/collectibles`);
+        let url = `${API_BASE}/collectibles`;
+        if (selectedStore) {
+            url += `?store_id=${selectedStore}`;
+        }
+
+        const response = await fetch(url);
         const data = await response.json();
-        
+
         if (data.success) {
-            collectibles = data.data;
-            renderCollectibles();
+            if (data.success) {
+                collectibles = data.data || [];
+                displayCollectibles();
+            }
+            displayCollectibles();
         }
     } catch (error) {
         console.error('Error loading collectibles:', error);
-        document.getElementById('collectiblesGrid').innerHTML = 
-            '<div class="loading">Failed to load collectibles. Please refresh the page.</div>';
     }
 }
 
-// Render collectibles grid
-function renderCollectibles() {
+// Display collectibles
+function displayCollectibles() {
     const grid = document.getElementById('collectiblesGrid');
-    
-    if (collectibles.length === 0) {
-        grid.innerHTML = '<div class="loading">No collectibles available at this time.</div>';
-        return;
-    }
+    grid.innerHTML = '';
 
-    grid.innerHTML = collectibles.map(collectible => `
-        <div class="collectible-card" data-id="${collectible.id}">
-            <img src="${collectible.image_url || '/images/placeholder.jpg'}" 
-                 alt="${collectible.name}" 
-                 class="collectible-image"
-                 onerror="this.src='/images/placeholder.jpg'">
-            <div class="collectible-content">
-                <div class="collectible-header">
-                    <h3 class="collectible-name">${collectible.name}</h3>
-                    <span class="size-badge size-${collectible.size.toLowerCase()}">${collectible.size}</span>
+    collectibles.forEach(collectible => {
+        const card = createCollectibleCard(collectible);
+        grid.appendChild(card);
+    });
+}
+
+// Create collectible card
+function createCollectibleCard(collectible) {
+    const card = document.createElement('div');
+    card.className = 'collectible-card';
+
+    // Determine size class for badge color
+    const sizeClass = `size-${collectible.size.toLowerCase()}`;
+
+    card.innerHTML = `
+        <div class="collectible-image" style="background-image: url('${collectible.image_url}'); background-size: cover; background-position: center;">
+            ${collectible.stock === 0 ? '<div class="out-of-stock-overlay"><div class="out-of-stock-badge">Out of Stock</div></div>' : ''}
+        </div>
+        <div class="collectible-content">
+            <div class="collectible-header">
+                <h3 class="collectible-name">${collectible.name}</h3>
+                <div class="size-badge ${sizeClass}">${collectible.size}</div>
+            </div>
+            <p class="collectible-description">
+                ${collectible.description}
+            </p>
+            <div class="collectible-footer" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                <div class="stock-display ${collectible.stock > 0 ? 'text-success' : 'text-error'}" style="font-size: 0.85rem; font-weight: 600;">
+                    ${collectible.stock > 0 ? `Only ${collectible.stock} left` : 'Out of stock'}
                 </div>
-                <p class="collectible-description">${collectible.description}</p>
-                <div class="collectible-footer">
-                    <div class="price">
-                        <span class="price-label">From</span>
-                        ₱${formatPrice(getPriceForSize(collectible.size))}
-                        <span class="price-label">/day</span>
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    <div>
+                        <span class="price-label" style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 2px;">From</span>
+                        <span class="price">₱${collectible.daily_rate}</span>
+                        <span class="price-label" style="display: inline;">/day</span>
                     </div>
-                    <button class="btn btn-primary rent-btn" data-id="${collectible.id}">
-                        Rent Now
+                    <button class="btn btn-primary btn-sm rental-btn" 
+                        data-id="${collectible.id}" 
+                        ${collectible.stock === 0 ? 'disabled' : ''}>
+                        ${collectible.stock > 0 ? 'Rent Now' : 'Out of Stock'}
                     </button>
                 </div>
             </div>
         </div>
-    `).join('');
+    `;
 
-    // Add click handlers to rent buttons
-    document.querySelectorAll('.rent-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const id = btn.getAttribute('data-id');
-            openRentalModal(id);
-        });
-    });
-
-    // Add click handlers to cards
-    document.querySelectorAll('.collectible-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const id = card.getAttribute('data-id');
-            openRentalModal(id);
-        });
-    });
-}
-
-// Get price for size
-function getPriceForSize(size) {
-    const prices = {
-        'S': 1000,
-        'M': 5000,
-        'L': 10000
-    };
-    return prices[size] || 0;
-}
-
-// Format price
-function formatPrice(price) {
-    return price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-// Open rental modal
-function openRentalModal(collectibleId) {
-    selectedCollectible = collectibles.find(c => c.id === collectibleId);
-    
-    if (!selectedCollectible) {
-        alert('Collectible not found');
-        return;
+    // Add event listener directly to the button
+    const btn = card.querySelector('.rental-btn');
+    if (btn && !btn.disabled) {
+        btn.addEventListener('click', () => openRentalModal(collectible.id));
     }
 
-    // Check if store is selected
+    // Add out of stock class if needed
+    if (collectible.stock === 0) {
+        card.classList.add('out-of-stock');
+    }
+
+    return card;
+}
+
+// Select store
+function selectStore(storeId) {
+    selectedStore = storeId;
+    const store = stores.find(s => s.id === storeId);
+    const selectedText = document.querySelector('.selected-text');
+    const options = document.querySelectorAll('.select-option');
+
+    if (store) {
+        selectedText.textContent = store.name;
+    }
+
+    options.forEach(opt => {
+        opt.classList.remove('active');
+        if (opt.dataset.value === storeId) {
+            opt.classList.add('active');
+        }
+    });
+
     const storeSelect = document.getElementById('storeSelect');
-    selectedStore = storeSelect.value;
-    
+    storeSelect.classList.remove('active');
+
+    loadCollectibles();
+}
+
+// Open Rental Modal
+function openRentalModal(collectibleId) {
     if (!selectedStore) {
-        alert('Please select a pickup store first');
-        storeSelect.focus();
+        showNotification('Please select a store first', 'error');
         return;
     }
 
-    // Update modal title
-    document.getElementById('modalTitle').textContent = `Rent ${selectedCollectible.name}`;
+    const collectible = collectibles.find(c => c.id === collectibleId);
+    if (!collectible) return;
 
-    // Reset form
+    selectedCollectible = collectible;
+
+    // Populate modal
+    document.getElementById('modalTitle').textContent = `Rent ${collectible.name}`;
+
+    // Update size badge in modal
+    const sizeBadge = document.getElementById('modalSizeBadge');
+    if (sizeBadge) {
+        sizeBadge.textContent = collectible.size;
+        // Remove old size classes and add new one
+        sizeBadge.className = 'size-badge'; // Reset to base class
+        sizeBadge.classList.add(`size-${collectible.size.toLowerCase()}`);
+    }
+
+    // Reset inputs
     document.getElementById('rentalDuration').value = 7;
-    document.querySelectorAll('.payment-method').forEach(el => el.classList.remove('selected'));
-    
-    // Show modal
-    document.getElementById('rentalModal').classList.add('active');
 
-    // Calculate initial quote
-    calculateQuote();
+    // Reset Quote UI
+    updateQuote(collectible.daily_rate, 7);
+
+    // Show modal
+    document.getElementById('rentalModal').style.display = 'flex';
+}
+
+// Update Quote Calculation
+function updateQuote(dailyRate, duration) {
+    let finalRate = dailyRate;
+    let isSpecial = false;
+
+    if (duration < 7) {
+        finalRate *= 2;
+        isSpecial = true;
+    }
+
+    const total = finalRate * duration;
+
+    // DOM Elements
+    const quoteDaily = document.getElementById('quoteDaily');
+    const quoteDuration = document.getElementById('quoteDuration');
+    const quoteTotal = document.getElementById('quoteTotal');
+    const quoteETA = document.getElementById('quoteETA');
+    const specialNotice = document.getElementById('specialRateNotice');
+    const quoteSummary = document.getElementById('quoteSummary');
+
+    if (quoteDaily) quoteDaily.textContent = `₱${finalRate.toFixed(2)}`;
+    if (quoteDuration) quoteDuration.textContent = `${duration} days`;
+    if (quoteTotal) quoteTotal.textContent = `₱${total.toFixed(2)}`;
+
+    // Estimate ETA (Simplistic: +1 day from now, or use collectible data if available)
+    // In a real app, we might call the API for precise ETA based on store selection
+    const etaDays = selectedCollectible ? selectedCollectible.eta_days : 1;
+    const etaDate = new Date();
+    etaDate.setDate(etaDate.getDate() + etaDays);
+    if (quoteETA) quoteETA.textContent = `${etaDate.toDateString()} (${etaDays} day${etaDays !== 1 ? 's' : ''})`;
+
+    if (specialNotice) {
+        specialNotice.style.display = isSpecial ? 'block' : 'none';
+    }
+
+    if (quoteSummary) quoteSummary.style.display = 'block';
 }
 
 // Setup event listeners
 function setupEventListeners() {
-    // Store selection
-    document.getElementById('storeSelect').addEventListener('change', (e) => {
-        selectedStore = e.target.value;
+    // Store dropdown
+    const trigger = document.getElementById('storeSelectTrigger');
+    const storeSelect = document.getElementById('storeSelect');
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        storeSelect.classList.toggle('active');
     });
 
-    // Modal close
-    document.getElementById('closeModal').addEventListener('click', closeModal);
-    document.getElementById('cancelBtn').addEventListener('click', closeModal);
+    document.addEventListener('click', () => {
+        storeSelect.classList.remove('active');
+    });
 
-    // Click outside modal to close
-    document.getElementById('rentalModal').addEventListener('click', (e) => {
-        if (e.target.id === 'rentalModal') {
-            closeModal();
+    // Close Modal
+    const closeModal = document.getElementById('closeModal');
+    if (closeModal) {
+        closeModal.addEventListener('click', () => {
+            document.getElementById('rentalModal').style.display = 'none';
+        });
+    }
+
+    // Close modal on outside click
+    window.addEventListener('click', (e) => {
+        const modal = document.getElementById('rentalModal');
+        if (e.target === modal) {
+            modal.style.display = 'none';
         }
     });
 
-    // Duration change
-    document.getElementById('rentalDuration').addEventListener('input', calculateQuote);
-
-    // Payment method selection
-    document.querySelectorAll('.payment-method').forEach(method => {
-        method.addEventListener('click', () => {
-            document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
-            method.classList.add('selected');
-        });
-    });
-}
-
-// Close modal
-function closeModal() {
-    document.getElementById('rentalModal').classList.remove('active');
-    selectedCollectible = null;
-}
-
-// Calculate quote
-async function calculateQuote() {
-    if (!selectedCollectible) return;
-
-    const duration = parseInt(document.getElementById('rentalDuration').value) || 0;
-    
-    if (duration < 1) {
-        document.getElementById('quoteSummary').style.display = 'none';
-        return;
-    }
-
-    try {
-        const response = await fetch(`${API_BASE}/rentals/quote`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                collectible_id: selectedCollectible.id,
-                duration: duration
-            })
-        });
-
-        const data = await response.json();
-        
-        if (data.success) {
-            const quote = data.data;
-            
-            // Update quote display
-            document.getElementById('quoteDaily').textContent = `₱${formatPrice(quote.daily_rate)}`;
-            document.getElementById('quoteDuration').textContent = `${quote.duration} days`;
-            document.getElementById('quoteTotal').textContent = `₱${formatPrice(quote.total_fee)}`;
-            document.getElementById('quoteSummary').style.display = 'block';
-
-            // Show special rate notice if applicable
-            const specialNotice = document.getElementById('specialRateNotice');
-            if (quote.is_special_rate) {
-                specialNotice.style.display = 'block';
-            } else {
-                specialNotice.style.display = 'none';
+    // Duration Change -> Update Quote
+    const durationInput = document.getElementById('rentalDuration');
+    if (durationInput) {
+        durationInput.addEventListener('input', (e) => {
+            const duration = parseInt(e.target.value) || 0;
+            if (selectedCollectible && duration > 0) {
+                updateQuote(selectedCollectible.daily_rate, duration);
             }
-        }
-    } catch (error) {
-        console.error('Error calculating quote:', error);
+        });
+    }
+
+    // Cancel Button in Modal
+    const cancelBtn = document.getElementById('cancelBtn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            document.getElementById('rentalModal').style.display = 'none';
+        });
     }
 }
 
-// Check URL for success/failure
-window.addEventListener('load', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const rentalId = urlParams.get('rental_id');
-    
-    if (window.location.pathname === '/success.html' && rentalId) {
-        document.body.innerHTML = `
-            <div class="container" style="text-align: center; padding: 4rem 2rem;">
-                <h1 style="font-size: 3rem; margin-bottom: 1rem;">✅ Payment Successful!</h1>
-                <p style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 2rem;">
-                    Your rental (ID: ${rentalId}) has been confirmed. You'll receive a confirmation email shortly.
-                </p>
-                <button class="btn btn-primary" onclick="window.location.href='/'">Browse More Collectibles</button>
-            </div>
-        `;
-    } else if (window.location.pathname === '/failed.html' && rentalId) {
-        document.body.innerHTML = `
-            <div class="container" style="text-align: center; padding: 4rem 2rem;">
-                <h1 style="font-size: 3rem; margin-bottom: 1rem;">❌ Payment Failed</h1>
-                <p style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 2rem;">
-                    Unfortunately, your payment could not be processed. Please try again.
-                </p>
-                <button class="btn btn-primary" onclick="window.location.href='/'">Return to Home</button>
-            </div>
-        `;
+// Add CSS animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
     }
-});
+    
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+    
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    
+    .modal-content {
+        background: var(--card-bg);
+        padding: 2rem;
+        border-radius: 12px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .btn-outline {
+        background: transparent;
+        border: 2px solid var(--primary);
+        color: var(--primary);
+    }
+    
+    .btn-outline:hover {
+        background: var(--primary);
+        color: white;
+    }
+`;
+document.head.appendChild(style);

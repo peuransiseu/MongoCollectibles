@@ -5,7 +5,7 @@ import (
 )
 
 // SeedData populates the repository with sample data
-func SeedData(repo *Repository) {
+func SeedData(repo Repository) {
 	// Seed collectibles
 	collectibles := []*models.Collectible{
 		{
@@ -53,7 +53,7 @@ func SeedData(repo *Repository) {
 			Name:        "Arcade Machine - Street Fighter II",
 			Description: "Original 1991 arcade cabinet, fully functional",
 			Size:        models.SizeLarge,
-			ImageURL:    "/images/arcade.jpg",
+			ImageURL:    "/images/street-fighter.jpg",
 			Available:   true,
 		},
 	}
@@ -62,116 +62,60 @@ func SeedData(repo *Repository) {
 		repo.AddCollectible(c)
 	}
 
-	// Seed warehouses with distance tuples
-	// Format: [(distance_to_store_A, distance_to_store_B, distance_to_store_C), ...]
-	
-	// Batman - 2 warehouses
-	repo.AddWarehouse("col-001", models.Warehouse{
-		ID:                "wh-001-1",
-		Name:              "Warehouse North - Batman",
-		CollectibleID:     "col-001",
-		Available:         true,
-		DistancesToStores: []int{1, 4, 5}, // Distances to stores A, B, C
-	})
-	repo.AddWarehouse("col-001", models.Warehouse{
-		ID:                "wh-001-2",
-		Name:              "Warehouse South - Batman",
-		CollectibleID:     "col-001",
-		Available:         true,
-		DistancesToStores: []int{3, 2, 3},
-	})
+	// Standard definition for 4 regional warehouses
+	regions := []struct {
+		IDSuffix  string
+		Name      string
+		Distances map[string]int
+	}{
+		{
+			IDSuffix: "-north",
+			Name:     "Warehouse North (QC)",
+			Distances: map[string]int{
+				"store-a": 5,  // Manila
+				"store-b": 1,  // QC (Close)
+				"store-c": 10, // Makati (Far)
+			},
+		},
+		{
+			IDSuffix: "-south",
+			Name:     "Warehouse South (Alabang)",
+			Distances: map[string]int{
+				"store-a": 8,  // Manila
+				"store-b": 12, // QC (Far)
+				"store-c": 1,  // Makati (Close)
+			},
+		},
+		{
+			IDSuffix: "-east",
+			Name:     "Warehouse East (Pasig)",
+			Distances: map[string]int{
+				"store-a": 6, // Manila
+				"store-b": 4, // QC
+				"store-c": 3, // Makati (Med)
+			},
+		},
+		{
+			IDSuffix: "-west",
+			Name:     "Warehouse West (Port Area)",
+			Distances: map[string]int{
+				"store-a": 1, // Manila (Close)
+				"store-b": 6, // QC
+				"store-c": 6, // Makati
+			},
+		},
+	}
 
-	// Millennium Falcon - 3 warehouses
-	repo.AddWarehouse("col-002", models.Warehouse{
-		ID:                "wh-002-1",
-		Name:              "Warehouse East - Falcon",
-		CollectibleID:     "col-002",
-		Available:         true,
-		DistancesToStores: []int{2, 1, 4},
-	})
-	repo.AddWarehouse("col-002", models.Warehouse{
-		ID:                "wh-002-2",
-		Name:              "Warehouse West - Falcon",
-		CollectibleID:     "col-002",
-		Available:         true,
-		DistancesToStores: []int{5, 3, 2},
-	})
-	repo.AddWarehouse("col-002", models.Warehouse{
-		ID:                "wh-002-3",
-		Name:              "Warehouse Central - Falcon",
-		CollectibleID:     "col-002",
-		Available:         true,
-		DistancesToStores: []int{3, 3, 3},
-	})
-
-	// Iron Man Suit - 2 warehouses
-	repo.AddWarehouse("col-003", models.Warehouse{
-		ID:                "wh-003-1",
-		Name:              "Warehouse Premium - Iron Man",
-		CollectibleID:     "col-003",
-		Available:         true,
-		DistancesToStores: []int{4, 2, 1},
-	})
-	repo.AddWarehouse("col-003", models.Warehouse{
-		ID:                "wh-003-2",
-		Name:              "Warehouse Secure - Iron Man",
-		CollectibleID:     "col-003",
-		Available:         true,
-		DistancesToStores: []int{2, 5, 4},
-	})
-
-	// Pokemon Cards - 3 warehouses
-	repo.AddWarehouse("col-004", models.Warehouse{
-		ID:                "wh-004-1",
-		Name:              "Warehouse A - Pokemon",
-		CollectibleID:     "col-004",
-		Available:         true,
-		DistancesToStores: []int{1, 3, 6},
-	})
-	repo.AddWarehouse("col-004", models.Warehouse{
-		ID:                "wh-004-2",
-		Name:              "Warehouse B - Pokemon",
-		CollectibleID:     "col-004",
-		Available:         true,
-		DistancesToStores: []int{4, 1, 5},
-	})
-	repo.AddWarehouse("col-004", models.Warehouse{
-		ID:                "wh-004-3",
-		Name:              "Warehouse C - Pokemon",
-		CollectibleID:     "col-004",
-		Available:         true,
-		DistancesToStores: []int{6, 5, 1},
-	})
-
-	// Gundam - 2 warehouses
-	repo.AddWarehouse("col-005", models.Warehouse{
-		ID:                "wh-005-1",
-		Name:              "Warehouse Tech - Gundam",
-		CollectibleID:     "col-005",
-		Available:         true,
-		DistancesToStores: []int{3, 4, 2},
-	})
-	repo.AddWarehouse("col-005", models.Warehouse{
-		ID:                "wh-005-2",
-		Name:              "Warehouse Main - Gundam",
-		CollectibleID:     "col-005",
-		Available:         true,
-		DistancesToStores: []int{2, 2, 5},
-	})
-
-	// Arcade Machine - 2 warehouses
-	repo.AddWarehouse("col-006", models.Warehouse{
-		ID:                "wh-006-1",
-		Name:              "Warehouse Retro - Arcade",
-		CollectibleID:     "col-006",
-		Available:         true,
-		DistancesToStores: []int{5, 1, 3},
-	})
-	repo.AddWarehouse("col-006", models.Warehouse{
-		ID:                "wh-006-2",
-		Name:              "Warehouse Gaming - Arcade",
-		CollectibleID:     "col-006",
-		Available:         true,
-		DistancesToStores: []int{1, 6, 2},
-	})
+	// Loop through all collectibles and assign one unit in each warehouse
+	for _, c := range collectibles {
+		for _, r := range regions {
+			repo.AddWarehouse(c.ID, models.Warehouse{
+				ID:            c.ID + r.IDSuffix,
+				Name:          r.Name,
+				CollectibleID: c.ID,
+				Available:     true,
+				Distances:     r.Distances,
+			})
+		}
+	}
 }

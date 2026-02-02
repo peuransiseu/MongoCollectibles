@@ -1,22 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MongoCollectibles - Premium Collectible Rentals</title>
-    <meta name="description" content="Rent premium collectibles from MongoCollectibles. Choose from vintage action figures, models, and arcade machines.">
+    <meta name="description"
+        content="Rent premium collectibles from MongoCollectibles. Choose from vintage action figures, models, and arcade machines.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css?v=3">
 </head>
+
 <body>
     <!-- Header -->
     <header class="header">
         <div class="header-content">
             <h1 class="logo">MongoCollectibles</h1>
             <nav>
-                <button class="btn btn-secondary" id="viewCartBtn">View Rentals</button>
+                <!-- Guest Rental Mode -->
+                <button class="btn btn-outline" onclick="location.reload()">Home</button>
             </nav>
         </div>
     </header>
@@ -35,9 +40,19 @@
         <section class="section-header">
             <h2 class="section-title">Select Your Pickup Store</h2>
             <div class="form-group">
-                <select id="storeSelect" class="form-select">
-                    <option value="">Loading stores...</option>
-                </select>
+                <div class="custom-select" id="storeSelect">
+                    <div class="select-trigger" id="storeSelectTrigger">
+                        <div class="content">
+                            <span class="select-icon">📍</span>
+                            <span class="selected-text">Select a store...</span>
+                        </div>
+                        <span class="arrow-icon">▼</span>
+                    </div>
+                    <div class="select-options" id="storeOptions">
+                        <!-- Options will be dynamically populated -->
+                        <div class="loading">Loading stores...</div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -47,7 +62,7 @@
                 <h2 class="section-title">Available Collectibles</h2>
                 <p class="section-subtitle">Browse our premium collection of rare and vintage items</p>
             </div>
-            
+
             <div id="collectiblesGrid" class="collectibles-grid">
                 <div class="loading">Loading collectibles...</div>
             </div>
@@ -55,17 +70,22 @@
     </main>
 
     <!-- Rental Modal -->
-    <div id="rentalModal" class="modal">
+    <div id="rentalModal" class="modal" style="display: none;">
         <div class="modal-content">
             <button class="modal-close" id="closeModal">&times;</button>
-            
-            <h2 id="modalTitle">Rent Collectible</h2>
-            
+
+            <h2 id="modalTitle" style="margin-bottom: 0.5rem;">Rent Collectible</h2>
+            <div id="modalSizeContainer" style="margin-bottom: 2rem;">
+                <span style="color: var(--text-secondary); font-size: 0.9rem;">Size: </span>
+                <span id="modalSizeBadge" class="size-badge"></span>
+            </div>
+
             <div id="modalBody">
                 <!-- Rental Duration -->
                 <div class="form-group">
                     <label class="form-label" for="rentalDuration">Rental Duration (days)</label>
-                    <input type="number" id="rentalDuration" class="form-input" min="1" value="7" placeholder="Enter number of days">
+                    <input type="number" id="rentalDuration" class="form-input" min="1" value="7"
+                        placeholder="Enter number of days">
                 </div>
 
                 <!-- Quote Summary -->
@@ -82,6 +102,10 @@
                         <span>Total:</span>
                         <span id="quoteTotal">₱0.00</span>
                     </div>
+                    <div class="quote-row">
+                        <span>ETA for Pickup:</span>
+                        <span id="quoteETA" style="font-weight: 600; color: var(--primary-color);">Calculating...</span>
+                    </div>
                 </div>
 
                 <!-- Special Rate Notice -->
@@ -89,28 +113,63 @@
                     ⚠️ Special rate applied: Rentals under 7 days are charged at double the normal rate.
                 </div>
 
-                <!-- Payment Method -->
-                <div class="form-group">
-                    <label class="form-label">Payment Method</label>
-                    <div class="payment-methods">
-                        <div class="payment-method" data-method="card">
-                            <div>💳 Card</div>
+                <!-- Accepted Payment Methods -->
+                <div class="form-group"
+                    style="width: 100%; overflow: hidden; background: white; padding: 1.25rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+                    <label class="form-label" style="color: #1a1a1a; font-weight: 700;">Accepted Payment Methods</label>
+                    <div class="payment-methods-grid"
+                        style="display: flex !important; flex-wrap: wrap !important; gap: 12px !important; margin: 1rem 0 !important; justify-content: flex-start !important;">
+                        <div class="payment-icon-item" title="Mastercard"
+                            style="width: 64px !important; height: 40px !important; background: #f8f9fa !important; border: 1px solid #eee !important;">
+                            <img src="https://checkout.paymongo.com/static/media/MasterCard.974dcf15.svg"
+                                class="payment-icon" alt="Mastercard"
+                                style="width: 52px !important; height: 28px !important; object-fit: contain !important;">
                         </div>
-                        <div class="payment-method" data-method="gcash">
-                            <div>📱 GCash</div>
+                        <div class="payment-icon-item" title="Visa"
+                            style="width: 64px !important; height: 40px !important; background: #f8f9fa !important; border: 1px solid #eee !important;">
+                            <img src="https://checkout.paymongo.com/static/media/Visa.d5d698fa.svg" class="payment-icon"
+                                alt="Visa"
+                                style="width: 52px !important; height: 28px !important; object-fit: contain !important;">
                         </div>
-                        <div class="payment-method" data-method="grabpay">
-                            <div>🚗 GrabPay</div>
+                        <div class="payment-icon-item" title="GCash"
+                            style="width: 64px !important; height: 40px !important; background: #f8f9fa !important; border: 1px solid #eee !important;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/GCash_logo.svg/320px-GCash_logo.svg.png"
+                                class="payment-icon" alt="GCash"
+                                style="width: 52px !important; height: 28px !important; object-fit: contain !important;">
                         </div>
-                        <div class="payment-method" data-method="bpi">
-                            <div>🏦 BPI Online</div>
+                        <div class="payment-icon-item" title="GrabPay"
+                            style="width: 64px !important; height: 40px !important; background: #f8f9fa !important; border: 1px solid #eee !important;">
+                            <img src="https://brandlogos.net/wp-content/uploads/2025/11/grabpay_horizontal-logo_brandlogos.net_cdivk-scaled.png"
+                                class="payment-icon" alt="GrabPay"
+                                style="width: 52px !important; height: 28px !important; object-fit: contain !important;">
+                        </div>
+                        <div class="payment-icon-item" title="Maya"
+                            style="width: 64px !important; height: 40px !important; background: #f8f9fa !important; border: 1px solid #eee !important;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Maya_logo.svg/320px-Maya_logo.svg.png"
+                                class="payment-icon" alt="Maya"
+                                style="width: 52px !important; height: 28px !important; object-fit: contain !important;">
+                        </div>
+                        <div class="payment-icon-item" title="BPI Online"
+                            style="width: 64px !important; height: 40px !important; background: #f8f9fa !important; border: 1px solid #eee !important;">
+                            <img src="https://images.seeklogo.com/logo-png/48/2/bank-of-the-philippine-islands-logo-png_seeklogo-482593.png"
+                                class="payment-icon" alt="BPI Online"
+                                style="width: 60px !important; height: 45px !important; object-fit: contain !important;">
+                        </div>
+                        <div class="payment-icon-item" title="QRPH"
+                            style="width: 64px !important; height: 40px !important; background: #f8f9fa !important; border: 1px solid #eee !important;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/3/35/QR_Ph_Logo.svg"
+                                class="payment-icon" alt="QRPH"
+                                style="width: 52px !important; height: 28px !important; object-fit: contain !important;">
                         </div>
                     </div>
+                    <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem; line-height: 1.4;">
+                        You will be redirected to our secure payment partner to complete your transaction.
+                    </p>
                 </div>
 
                 <!-- Customer Details -->
                 <h3 style="margin-top: 1.5rem; margin-bottom: 1rem;">Billing Details</h3>
-                
+
                 <div class="form-group">
                     <label class="form-label" for="customerName">Full Name *</label>
                     <input type="text" id="customerName" class="form-input" required placeholder="Juan Dela Cruz">
@@ -128,7 +187,8 @@
 
                 <div class="form-group">
                     <label class="form-label" for="customerAddress">Address *</label>
-                    <input type="text" id="customerAddress" class="form-input" required placeholder="123 Main Street, Barangay">
+                    <input type="text" id="customerAddress" class="form-input" required
+                        placeholder="123 Main Street, Barangay">
                 </div>
 
                 <div class="form-group">
@@ -144,7 +204,8 @@
                 <!-- Action Buttons -->
                 <div style="display: flex; gap: 1rem; margin-top: 2rem;">
                     <button class="btn btn-secondary" id="cancelBtn" style="flex: 1;">Cancel</button>
-                    <button class="btn btn-primary" id="checkoutBtn" style="flex: 2;">Proceed to Payment</button>
+                    <button class="btn btn-primary" id="proceedToPaymentBtn" style="flex: 2;">Proceed to
+                        Payment</button>
                 </div>
             </div>
         </div>
@@ -161,7 +222,13 @@
         </div>
     </div>
 
-    <script src="/js/app.js"></script>
-    <script src="/js/checkout.js"></script>
+    <!-- Login Modal Removed -->
+    <!-- Register Modal Removed -->
+    <!-- Cart Modal Removed -->
+    <!-- Orders Modal Removed -->
+
+    <script src="/js/app.js?v=4"></script>
+    <script src="/js/checkout.js?v=3"></script>
 </body>
+
 </html>
