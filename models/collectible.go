@@ -25,31 +25,31 @@ func (s Size) GetDailyRate() float64 {
 
 // Collectible represents a rentable collectible item
 type Collectible struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Size        Size    `json:"size"`
-	ImageURL    string  `json:"image_url"`
-	Stock       int     `json:"stock"` // Dynamic field for available units
-	Available   bool    `json:"available"`
-	DailyRate   float64 `json:"daily_rate"` // Daily rental rate
-	ETADays     int     `json:"eta_days"`   // Estimated time of arrival in days
+	ID          string  `json:"id" dynamodbav:"id"`
+	Name        string  `json:"name" dynamodbav:"name"`
+	Description string  `json:"description" dynamodbav:"description"`
+	Size        Size    `json:"size" dynamodbav:"size"`
+	ImageURL    string  `json:"image_url" dynamodbav:"image_url"`
+	Stock       int     `json:"stock" dynamodbav:"stock"` // Dynamic field for available units
+	Available   bool    `json:"available" dynamodbav:"available"`
+	DailyRate   float64 `json:"daily_rate" dynamodbav:"daily_rate"` // Daily rental rate
+	ETADays     int     `json:"eta_days" dynamodbav:"-"`            // Estimated time of arrival in days, ignored in DB
 }
 
 // Store represents a brick-and-mortar store location
 type Store struct {
-	ID        string  `json:"id"`
-	Name      string  `json:"name"`
-	Address   string  `json:"address"`
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
+	ID        string  `json:"id" dynamodbav:"id"`
+	Name      string  `json:"name" dynamodbav:"name"`
+	Address   string  `json:"address" dynamodbav:"address"`
+	Latitude  float64 `json:"latitude" dynamodbav:"latitude"`
+	Longitude float64 `json:"longitude" dynamodbav:"longitude"`
 }
 
 // Warehouse represents a storage location for collectibles
 type Warehouse struct {
-	ID            string         `json:"id"`
-	Name          string         `json:"name"`
-	CollectibleID string         `json:"collectible_id"`
-	Available     bool           `json:"available"`
-	Distances     map[string]int `json:"distances"` // StoreID -> distance (km)
+	ID            string         `json:"id" dynamodbav:"id"`
+	Name          string         `json:"name" dynamodbav:"name"`
+	CollectibleID string         `json:"collectible_id" dynamodbav:"collectible_id"`
+	Available     bool           `json:"available" dynamodbav:"available"`
+	Distances     map[string]int `json:"distances" dynamodbav:"distances"` // StoreID -> distance (km)
 }

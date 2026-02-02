@@ -24,32 +24,33 @@ const (
 
 // Customer represents customer information
 type Customer struct {
-	Name       string `json:"name"`
-	Email      string `json:"email"`
-	Phone      string `json:"phone"`
-	Address    string `json:"address"`
-	City       string `json:"city"`
-	PostalCode string `json:"postal_code"`
+	Name       string `json:"name" dynamodbav:"name"`
+	Email      string `json:"email" dynamodbav:"email"`
+	Phone      string `json:"phone" dynamodbav:"phone"`
+	Address    string `json:"address" dynamodbav:"address"`
+	City       string `json:"city" dynamodbav:"city"`
+	PostalCode string `json:"postal_code" dynamodbav:"postal_code"`
 }
 
 // Rental represents a rental transaction
 type Rental struct {
-	ID              string        `json:"id"`
-	CollectibleID   string        `json:"collectible_id"`
-	CollectibleName string        `json:"collectible_name"`
-	StoreID         string        `json:"store_id"`
-	WarehouseID     string        `json:"warehouse_id"`
-	Customer        Customer      `json:"customer"`
-	Duration        int           `json:"duration"` // in days
-	DailyRate       float64       `json:"daily_rate"`
-	TotalFee        float64       `json:"total_fee"`
-	PaymentMethod   PaymentMethod `json:"payment_method"`
-	PaymentStatus   PaymentStatus `json:"payment_status"`
-	PaymentID       string        `json:"payment_id"`
-	PaymentURL      string        `json:"payment_url"`
-	ETA             int           `json:"eta"` // in days
-	CreatedAt       time.Time     `json:"created_at"`
-	UpdatedAt       time.Time     `json:"updated_at"`
+	ID              string        `json:"id" dynamodbav:"id"`
+	CollectibleID   string        `json:"collectible_id" dynamodbav:"collectible_id"`
+	CollectibleName string        `json:"collectible_name" dynamodbav:"collectible_name"`
+	StoreID         string        `json:"store_id" dynamodbav:"store_id"`
+	WarehouseID     string        `json:"warehouse_id" dynamodbav:"warehouse_id"`
+	Customer        Customer      `json:"customer" dynamodbav:"customer"`
+	CustomerEmail   string        `json:"customer_email" dynamodbav:"customer_email"` // For GSI Index
+	Duration        int           `json:"duration" dynamodbav:"duration"`             // in days
+	DailyRate       float64       `json:"daily_rate" dynamodbav:"daily_rate"`
+	TotalFee        float64       `json:"total_fee" dynamodbav:"total_fee"`
+	PaymentMethod   PaymentMethod `json:"payment_method" dynamodbav:"payment_method"`
+	PaymentStatus   PaymentStatus `json:"payment_status" dynamodbav:"payment_status"`
+	PaymentID       string        `json:"payment_id" dynamodbav:"payment_id"`
+	PaymentURL      string        `json:"payment_url" dynamodbav:"payment_url"`
+	ETA             int           `json:"eta" dynamodbav:"eta"` // in days
+	CreatedAt       time.Time     `json:"created_at" dynamodbav:"created_at"`
+	UpdatedAt       time.Time     `json:"updated_at" dynamodbav:"updated_at"`
 }
 
 // RentalQuoteRequest represents a request for rental fee calculation

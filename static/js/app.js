@@ -87,7 +87,10 @@ async function loadCollectibles() {
         const data = await response.json();
 
         if (data.success) {
-            collectibles = data.data;
+            if (data.success) {
+                collectibles = data.data || [];
+                displayCollectibles();
+            }
             displayCollectibles();
         }
     } catch (error) {

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -15,7 +16,7 @@ import (
 
 // RentalsHandler handles rental-related endpoints
 type RentalsHandler struct {
-	repo              *data.Repository
+	repo              data.Repository
 	pricingService    *services.PricingService
 	allocationManager *services.AllocationManager
 	paymentService    *services.PaymentService
@@ -24,7 +25,7 @@ type RentalsHandler struct {
 
 // NewRentalsHandler creates a new rentals handler
 func NewRentalsHandler(
-	repo *data.Repository,
+	repo data.Repository,
 	pricingService *services.PricingService,
 	allocationManager *services.AllocationManager,
 	paymentService *services.PaymentService,
@@ -144,7 +145,7 @@ func (h *RentalsHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 
 	// Idempotency: Check if user already has a pending rental for this collectible
 	// note: This simplistic check assumes 1 pending rental per user/collectible pair is allowed
-	existingRentals := h.repo.GetRentalsByCustomerAndCollectible(req.Customer.Email, req.CollectibleID)
+	existingRentals, _ := h.repo.GetRentalsByCustomerAndCollectible(req.Customer.Email, req.CollectibleID)
 	for _, rent := range existingRentals {
 		if rent.PaymentStatus == models.PaymentPending {
 			// Found existing pending rental, reuse it
@@ -191,8 +192,16 @@ func (h *RentalsHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt:       time.Now(),
 	}
 
+	// Determine Base URL
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	baseURL := fmt.Sprintf("%s://%s", scheme, r.Host)
+
 	// Create payment session
 	paymentID, paymentURL, err := h.paymentService.CreateCheckoutSession(
+		baseURL,
 		totalFee,
 		rentalID,
 		collectible.Name,

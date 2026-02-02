@@ -11,13 +11,13 @@ import (
 
 // PaymentsHandler handles payment webhooks and callbacks
 type PaymentsHandler struct {
-	repo              *data.Repository
+	repo              data.Repository
 	paymentService    *services.PaymentService
 	allocationManager *services.AllocationManager
 }
 
 // NewPaymentsHandler creates a new payments handler
-func NewPaymentsHandler(repo *data.Repository, paymentService *services.PaymentService, allocationManager *services.AllocationManager) *PaymentsHandler {
+func NewPaymentsHandler(repo data.Repository, paymentService *services.PaymentService, allocationManager *services.AllocationManager) *PaymentsHandler {
 	return &PaymentsHandler{
 		repo:              repo,
 		paymentService:    paymentService,
@@ -67,7 +67,7 @@ func (h *PaymentsHandler) WebhookPayMongo(w http.ResponseWriter, r *http.Request
 	if eventType == "checkout_session.expired" {
 		// Find rental by payment ID (which is the session ID in this context)
 		// Or if we store session ID separately
-		rentals := h.repo.GetAllRentals()
+		rentals, _ := h.repo.GetAllRentals()
 		for _, rental := range rentals {
 			if rental.PaymentID == paymentID {
 				// Release unit
@@ -89,7 +89,7 @@ func (h *PaymentsHandler) WebhookPayMongo(w http.ResponseWriter, r *http.Request
 	}
 
 	// Update rental status based on payment
-	rentals := h.repo.GetAllRentals()
+	rentals, _ := h.repo.GetAllRentals()
 	for _, rental := range rentals {
 		if rental.PaymentID == paymentID {
 			rental.PaymentStatus = status
@@ -113,6 +113,12 @@ func (h *PaymentsHandler) PaymentSuccess(w http.ResponseWriter, r *http.Request)
 
 	rental.PaymentStatus = models.PaymentCompleted
 	h.repo.UpdateRental(rental)
+
+	// Confirm reservation in allocation manager to prevent auto-cleanup
+	if err := h.allocationManager.ConfirmReservation(rental.CollectibleID, rental.WarehouseID); err != nil {
+		// Log error but assume valid since we are in success flow
+		// log.Printf("Warning: Failed to confirm reservation: %v", err)
+	}
 
 	// Redirect to success page
 	http.Redirect(w, r, "/success.html?rental_id="+rentalID, http.StatusSeeOther)

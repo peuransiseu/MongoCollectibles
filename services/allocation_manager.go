@@ -109,8 +109,49 @@ func (am *AllocationManager) GetTotalStock(collectibleID string) int {
 			count++
 		}
 	}
-	log.Printf("[Allocation] Stock query for %s: %d available", collectibleID, count)
+	// log.Printf("[Allocation] Stock query for %s: %d available", collectibleID, count)
 	return count
+}
+
+// InventorySnapshot represents a snapshot of inventory for admin
+type InventorySnapshot struct {
+	CollectibleID string     `json:"collectible_id"`
+	WarehouseID   string     `json:"warehouse_id"`
+	IsAvailable   bool       `json:"is_available"`
+	ReservedAt    *time.Time `json:"reserved_at,omitempty"`
+}
+
+// GetAllInventory returns the full state of inventory
+func (am *AllocationManager) GetAllInventory() []InventorySnapshot {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	var snapshot []InventorySnapshot
+	for _, unit := range am.inventory {
+		snapshot = append(snapshot, InventorySnapshot{
+			CollectibleID: unit.CollectibleID,
+			WarehouseID:   unit.WarehouseID,
+			IsAvailable:   unit.IsAvailable,
+			ReservedAt:    unit.ReservedAt,
+		})
+	}
+	return snapshot
+}
+
+// ConfirmReservation marks a unit as permanently reserved (paid), preventing auto-cleanup
+func (am *AllocationManager) ConfirmReservation(collectibleID string, warehouseID string) error {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	for _, unit := range am.inventory {
+		if unit.CollectibleID == collectibleID && unit.WarehouseID == warehouseID && !unit.IsAvailable {
+			// Clear the reservation timestamp so cleanup job ignores it
+			unit.ReservedAt = nil
+			log.Printf("[Allocation] Confirmed reservation for Unit %s (Permanent Lock)", unit.ID)
+			return nil
+		}
+	}
+	return errors.New("unit not found or already available")
 }
 
 // GetETA calculates the estimated delivery time (minimum distance) for a collectible to a store
@@ -191,6 +232,48 @@ func (am *AllocationManager) CleanupExpiredReservations(timeout time.Duration) {
 	if count > 0 {
 		log.Printf("[Cleanup] Released %d expired reservations", count)
 	}
+}
+
+// SyncInventory updates the in-memory inventory based on active rentals from the database
+func (am *AllocationManager) SyncInventory(activeRentals []*models.Rental) {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	log.Printf("[Allocation] Syncing inventory with %d active rentals...", len(activeRentals))
+	count := 0
+
+	for _, rental := range activeRentals {
+		// Only sync valid active states
+		if rental.PaymentStatus == models.PaymentFailed {
+			continue
+		}
+
+		// Find the unit
+		for _, unit := range am.inventory {
+			if unit.CollectibleID == rental.CollectibleID && unit.WarehouseID == rental.WarehouseID {
+				if unit.IsAvailable {
+					unit.IsAvailable = false
+					count++
+
+					// If pending, give it a timestamp so it can expire if abandoned
+					// If completed, leave timestamp nil (permanent lock)
+					if rental.PaymentStatus == models.PaymentPending {
+						// We use the rental creation time or now?
+						// Using now ensures we give them a fresh window or we could use rental.UpdatedAt
+						// Let's use Now to be safe on startup, or Rental.UpdatedAt to be strict.
+						// Using Now allows a grace period after server restart.
+						now := time.Now()
+						unit.ReservedAt = &now
+					} else {
+						unit.ReservedAt = nil // Permanent
+					}
+					// log.Printf("[Sync] Reserved Unit %s for Rental %s (%s)", unit.ID, rental.ID, rental.PaymentStatus)
+				}
+				break
+			}
+		}
+	}
+	log.Printf("[Allocation] Sync completed. Market %d units as reserved.", count)
 }
 
 // StartCleanupJob starts a background goroutine to clean up expired reservations

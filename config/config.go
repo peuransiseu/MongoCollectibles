@@ -25,8 +25,8 @@ func LoadConfig() *Config {
 	}
 
 	config := &Config{
-		PayMongoSecretKey: getEnv("TEST_SECRET_KEY", ""),
-		PayMongoPublicKey: getEnv("TEST_PUBLIC_KEY", ""),
+		PayMongoSecretKey: getEnv("PAYMONGO_SECRET_KEY", getEnv("TEST_SECRET_KEY", "")),
+		PayMongoPublicKey: getEnv("PAYMONGO_PUBLIC_KEY", getEnv("TEST_PUBLIC_KEY", "")),
 		ServerPort:        getEnv("SERVER_PORT", "8080"),
 		Environment:       getEnv("ENVIRONMENT", "development"),
 		Stores:            initializeStores(),

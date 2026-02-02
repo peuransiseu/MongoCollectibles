@@ -1,0 +1,440 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  MongoCollectibles
+  High Availability Architecture with ALB, EC2 (Private), and DynamoDB (VPC Endpoint)
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    Description: EC2 Instance Type
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Default: mongoapp # Replace or provide at deploy time
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64'
+    Description: Auto-select latest Amazon Linux 2023 AMI
+  ArtifactBucket:
+    Type: String
+    Description: Name of the S3 bucket containing the application binary and assets
+
+Resources:
+  # =========================================================================
+  # =========================================================================
+  # Resources moved to bottom to consolidate
+  # =========================================================================
+
+  # =========================================================================
+  CollectiblesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: MongoCollectibles-Collectibles
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+
+  RentalsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: MongoCollectibles-Rentals
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: customer_email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: CustomerEmailIndex
+          KeySchema:
+            - AttributeName: customer_email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  WarehousesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: MongoCollectibles-Warehouses
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: collectible_id
+          AttributeType: S
+        - AttributeName: warehouse_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: collectible_id
+          KeyType: HASH
+        - AttributeName: warehouse_id
+          KeyType: RANGE
+
+  # =========================================================================
+  # Networking (VPC, Subnets, Gateways)
+  # =========================================================================
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: MongoCollectibles-VPC
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: MongoCollectibles-IGW
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  # NAT Gateway (Required for Private EC2 to access Internet for updates/packages)
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: MongoCollectibles-NAT
+
+  # Route Tables
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: MongoCollectibles-PublicRT
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: MongoCollectibles-PrivateRT
+
+  # Routes
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  # Subnets
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: MongoCollectibles-PublicSubnet1
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: MongoCollectibles-PublicSubnet2
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: 10.0.10.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: MongoCollectibles-PrivateSubnet1
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: 10.0.11.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: MongoCollectibles-PrivateSubnet2
+
+  # Route Table Associations
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  # VPC Endpoint for DynamoDB
+  DynamoDBEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.dynamodb"
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref PrivateRouteTable
+        # - !Ref PublicRouteTable # Optional: if public subnets also need optimized access
+
+  # =========================================================================
+  # Security Groups
+  # =========================================================================
+  LoadBalancerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP traffic to ALB
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: MongoCollectibles-ALB-SG
+
+  InstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow traffic from ALB
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080 # App running on port 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref LoadBalancerSG
+        - IpProtocol: tcp # Allow SSH (Optional, only possible via Bastion now)
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.0.0.0/16 # Restrict to VPC CIDR or Bastion IP
+      Tags:
+        - Key: Name
+          Value: MongoCollectibles-EC2-SG
+
+  # =========================================================================
+  # Load Balancer & Auto Scaling
+  # =========================================================================
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: MongoCollectibles-ALB
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref LoadBalancerSG
+      Scheme: internet-facing
+      Type: application
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: MongoCollectibles-TG2
+      Port: 8080
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref WebLaunchTemplate
+        Version: !GetAtt WebLaunchTemplate.LatestVersionNumber
+      MinSize: 1
+      MaxSize: 1
+      DesiredCapacity: 1
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      TargetGroupARNs:
+        - !Ref TargetGroup
+      Tags:
+        - Key: Name
+          Value: MongoCollectibles-Instance
+          PropagateAtLaunch: true
+
+  # =========================================================================
+  # IAM Role for EC2 to access DynamoDB and S3
+  # =========================================================================
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+      Policies:
+        - PolicyName: AppPermissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                  - dynamodb:UpdateItem
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub 'arn:aws:s3:::${ArtifactBucket}/*'
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Sub 'arn:aws:s3:::${ArtifactBucket}'
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  WebLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: MongoCollectibles-LaunchTemplate
+      LaunchTemplateData:
+        ImageId: !Ref LatestAmiId
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyName
+        SecurityGroupIds:
+          - !Ref InstanceSG
+        IamInstanceProfile:
+          Name: !Ref InstanceProfile
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum update -y
+            
+            # Create app directory
+            mkdir -p /app
+            cd /app
+            
+            # Download Application
+            echo "Downloading application from S3..."
+            aws s3 cp s3://${ArtifactBucket}/rental-system ./rental-system
+            aws s3 sync s3://${ArtifactBucket}/static ./static
+            
+            # Make executable
+            chmod +x ./rental-system
+            
+            # Setup Environment (Export for shell session debugging)
+            export USE_DYNAMODB=true
+            export SERVER_PORT=8080
+            export PAYMONGO_SECRET_KEY=sk_test_tBNPqbHKp7QXMAx2tkjhVrnh
+            export RESET_RENTALS=true
+
+            # Run Application via Systemd (for robustness)
+            cat <<EOF > /etc/systemd/system/mongocollectibles.service
+            [Unit]
+            Description=MongoCollectibles Rental System
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=root
+            WorkingDirectory=/app
+            ExecStart=/app/rental-system
+            Restart=on-failure
+            Environment=USE_DYNAMODB=true
+            Environment=SERVER_PORT=8080
+            Environment=AWS_REGION=${AWS::Region}
+            Environment=PAYMONGO_SECRET_KEY=sk_test_tBNPqbHKp7QXMAx2tkjhVrnh
+            Environment=RESET_RENTALS=true
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+
+            systemctl enable mongocollectibles
+            systemctl start mongocollectibles
+
+Outputs:
+  LoadBalancerDNS:
+    Description: DNS of the Application Load Balancer
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+  DynamoDBTableCollectibles:
+    Value: !Ref CollectiblesTable
+  DynamoDBTableRentals:
+    Value: !Ref RentalsTable

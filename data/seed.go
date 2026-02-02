@@ -5,7 +5,7 @@ import (
 )
 
 // SeedData populates the repository with sample data
-func SeedData(repo *Repository) {
+func SeedData(repo Repository) {
 	// Seed collectibles
 	collectibles := []*models.Collectible{
 		{
