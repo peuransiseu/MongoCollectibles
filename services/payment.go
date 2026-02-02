@@ -87,7 +87,7 @@ func (s *PaymentService) CreateCheckoutSession(baseURL string, amount float64, r
 				},
 				PaymentMethodTypes: []string{"qrph", "gcash", "paymaya", "card", "grab_pay", "dob", "dob_ubp"},
 				Description:        fmt.Sprintf("Rental for %s (%d days)", collectibleName, duration),
-				SendEmailReceipt:   false,
+				SendEmailReceipt:   true,
 				ShowDescription:    true,
 				ShowLineItems:      true,
 				SuccessUrl:         fmt.Sprintf("%s/payment/success?rental_id=%s", baseURL, rentalID),

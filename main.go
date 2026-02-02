@@ -102,6 +102,16 @@ func main() {
 		log.Printf("Warning: Failed to fetch rentals for sync: %v", err)
 	}
 
+	// VALIDATION: Enforce Minimum 3 Stores Rule PER WAREHOUSE
+	// We iterate through every physical warehouse node to ensure full connectivity.
+	for _, wh := range newDistances {
+		storeCount := len(wh.Distances)
+		if storeCount < 3 {
+			log.Fatalf("System Startup Failed: Constraint Violation. Warehouse '%s' only has %d stores connected (Minimum 3 required).", wh.ID, storeCount)
+		}
+	}
+	log.Printf("System Validation Passed: All warehouses meet connectivity requirements.", len(newDistances))
+
 	// Start reservation cleanup job (Run every 5 mins, expire after 15 mins)
 	allocationManager.StartCleanupJob(5*time.Minute, 15*time.Minute)
 
