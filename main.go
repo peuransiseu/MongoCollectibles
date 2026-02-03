@@ -112,8 +112,8 @@ func main() {
 	}
 	log.Printf("System Validation Passed: All warehouses meet connectivity requirements.", len(newDistances))
 
-	// Start reservation cleanup job (Run every 5 mins, expire after 15 mins)
-	allocationManager.StartCleanupJob(5*time.Minute, 15*time.Minute)
+	// Start reservation cleanup job (Run every 1 mins, expire after 10 mins)
+	allocationManager.StartCleanupJob(1*time.Minute, 2*time.Minute)
 
 	paymentService := services.NewPaymentService(cfg.PayMongoSecretKey, cfg.PayMongoPublicKey)
 
