@@ -38,11 +38,11 @@ type Collectible struct {
 
 // Store represents a brick-and-mortar store location
 type Store struct {
-	ID        string  `json:"id" dynamodbav:"id"`
-	Name      string  `json:"name" dynamodbav:"name"`
-	Address   string  `json:"address" dynamodbav:"address"`
-	Latitude  float64 `json:"latitude" dynamodbav:"latitude"`
-	Longitude float64 `json:"longitude" dynamodbav:"longitude"`
+	ID      string `json:"id" dynamodbav:"id"`
+	Name    string `json:"name" dynamodbav:"name"`
+	Address string `json:"address" dynamodbav:"address"`
+	// Latitude  float64 `json:"latitude" dynamodbav:"latitude"`
+	// Longitude float64 `json:"longitude" dynamodbav:"longitude"`
 }
 
 // Warehouse represents a storage location for collectibles

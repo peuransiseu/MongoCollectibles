@@ -48,25 +48,25 @@ func getEnv(key, defaultValue string) string {
 func initializeStores() []models.Store {
 	return []models.Store{
 		{
-			ID:        "store-a",
-			Name:      "MongoCollectibles Store A",
-			Address:   "123 Main Street, Manila",
-			Latitude:  14.5995,
-			Longitude: 120.9842,
+			ID:      "store-a",
+			Name:    "MongoCollectibles Store A",
+			Address: "123 Main Street, Manila",
+			// Latitude:  14.5995,
+			// Longitude: 120.9842,
 		},
 		{
-			ID:        "store-b",
-			Name:      "MongoCollectibles Store B",
-			Address:   "456 Quezon Avenue, Quezon City",
-			Latitude:  14.6760,
-			Longitude: 121.0437,
+			ID:      "store-b",
+			Name:    "MongoCollectibles Store B",
+			Address: "456 Quezon Avenue, Quezon City",
+			// Latitude:  14.6760,
+			// Longitude: 121.0437,
 		},
 		{
-			ID:        "store-c",
-			Name:      "MongoCollectibles Store C",
-			Address:   "789 Makati Boulevard, Makati",
-			Latitude:  14.5547,
-			Longitude: 121.0244,
+			ID:      "store-c",
+			Name:    "MongoCollectibles Store C",
+			Address: "789 Makati Boulevard, Makati",
+			// Latitude:  14.5547,
+			// Longitude: 121.0244,
 		},
 	}
 }
