@@ -68,10 +68,7 @@ type PayMongoSessionResponse struct {
 // CreateCheckoutSession creates a checkout session via PayMongo API
 func (s *PaymentService) CreateCheckoutSession(baseURL string, amount float64, rentalID string, collectibleName string, duration int) (string, string, error) {
 	// Convert amount to centavos
-	// Note: Total amount for the session.
-	// The user's snippet showed amount 10000 and quantity 7.
-	// We'll pass the total fee as one item with quantity 1 for simplicity,
-	// or match the rental details.
+
 	amountCentavos := int(amount * 100)
 
 	requestData := PayMongoSessionRequest{
@@ -81,7 +78,7 @@ func (s *PaymentService) CreateCheckoutSession(baseURL string, amount float64, r
 					{
 						Amount:   amountCentavos,
 						Currency: "PHP",
-						Name:     collectibleName,
+						Name:     fmt.Sprintf("%s (%d Days Rental)", collectibleName, duration),
 						Quantity: 1,
 					},
 				},
@@ -164,23 +161,8 @@ type PayMongoCustomerResponse struct {
 
 // CreateCustomer creates a customer in PayMongo
 func (s *PaymentService) CreateCustomer(customer models.Customer) (string, error) {
-	// Split name into first and last name (simple heuristic)
-	// In a real app, you might want to store them separately in models.Customer
-	var firstName, lastName string
-	// Split by space
-	// This is just a basic implementation
-	// If name has no spaces, everything goes to firstName
-	// If multiple spaces, last word is lastName, rest is firstName
-	// ...
-	// For simplicity, let's just pass the full name as first name if needed, or split.
-	// PayMongo attributes: first_name, last_name.
-	// Let's do a simple split.
-	// actually standard PayMongo API might allow simple name?
-	// Checking docs (simulation): create customer takes first_name, last_name, email, phone.
 
-	// Simple split:
-	// If Name is "John Doe" -> First: John, Last: Doe
-	// If Name is "John" -> First: John, Last: .
+	var firstName, lastName string
 
 	nameParts := SplitName(customer.Name)
 	firstName = nameParts[0]
@@ -241,20 +223,6 @@ func (s *PaymentService) CreateCustomer(customer models.Customer) (string, error
 
 // SplitName helper
 func SplitName(name string) []string {
-	// This is a placeholder, implementation can be improved
-	// For now, assuming simple space separation
-	// Return [First, Last]
-	// If no space, return [Name, ""]
-	// Imports "strings" needed? Yes.
-	// I will add strings import.
-
-	// Actually, I can avoid helper and do logic inline or simple substring.
-	// Let's keep it inline-ish with basic logic to avoid extra function/import for now if possible,
-	// OR add "strings" to imports. "strings" is standard.
-	// I'll add "strings" to imports in a separate Edit or use basic iteration.
-	// Wait, I can't add imports with replace_file_content in the middle easily.
-	// I will implement a loop or just assume First Name = Name for now to keep it simple,
-	// OR just use a simple space check.
 
 	var first, last string
 	for i := len(name) - 1; i >= 0; i-- {

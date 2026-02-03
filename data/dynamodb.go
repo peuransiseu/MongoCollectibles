@@ -111,26 +111,6 @@ func (r *DynamoDBRepository) AddWarehouse(collectibleID string, warehouse models
 	// Ensure warehouse struct has collectible_id set, might be redundant but safe
 	warehouse.CollectibleID = collectibleID
 
-	// Warehouse table primary keys: PK=collectible_id, SK=warehouse_id?
-	// Based on template.yaml: PK=collectible_id, SK=warehouse_id
-	// Ensure warehouse struct maps fields correctly for SK
-	// Assuming models.Warehouse has WarehouseID field or ID is used as SK.
-	// template.yaml says: AttributeName: warehouse_id
-	// models.Warehouse has ID string `json:"id"`. We should make sure it maps to `warehouse_id` if we want match,
-	// OR we change model tag to `dynamodbav:"warehouse_id"` for ID field?
-	// Let's check models/collectible.go again.
-	// Struct: ID string `... dynamodbav:"id"`
-	// Template: SK=warehouse_id.
-	// We should map ID -> warehouse_id in the item, or simple:
-	// Actually, I should just use `id` as SK in template to match model, OR change model. Used `id` in model.
-	// Changing template is easier? Or constructing map manually.
-	// Let's assume for now I will use `id` as the SK in DynamoDB too.
-	// WAIT, I defined `warehouse_id` as SK in template.
-	// Let's stick to using `id` as `warehouse_id` concept, but I need to ensure it's saved as `warehouse_id` attribute.
-	// I can do this by just adding an extra field or manual map.
-	// Easier: Update template.yaml to use `id` as SK? No, `id` is generic. `warehouse_id` makes sense.
-	// I will manually adjust the item map before PUT.
-
 	item, err := attributevalue.MarshalMap(warehouse)
 	if err != nil {
 		return err
@@ -148,11 +128,6 @@ func (r *DynamoDBRepository) AddWarehouse(collectibleID string, warehouse models
 	return nil
 }
 
-// GetAllWarehouses is complicated for DynamoDB (Scan whole table).
-// It's used by AllocationManager initialization to build in-memory state.
-// If we use DynamoDB, we might not need to load EVERYTHING into memory if we query on demand.
-// BUT, the current AllocationManager is designed to work in-memory.
-// For the purpose of this migration, we will Scan the table.
 func (r *DynamoDBRepository) GetAllWarehouses() (map[string][]models.Warehouse, error) {
 	out, err := r.client.Scan(context.TODO(), &dynamodb.ScanInput{
 		TableName: aws.String(r.warehousesTable),
