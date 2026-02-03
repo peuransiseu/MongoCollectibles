@@ -89,8 +89,6 @@ func (am *AllocationManager) Allocate(collectibleID string, storeID string) (*mo
 	bestUnit.IsAvailable = false
 	now := time.Now()
 	bestUnit.ReservedAt = &now
-	// reservationID isn't passed here in the current signature, we can add it later or rely on IsAvailable=false + timestamp
-	// Ideally, Allocate should take a reservationID or return one. For now, we rely on the timestamp.
 
 	log.Printf("[Reservation] Temporary reservation created for Unit %s (Expires in 10m)", bestUnit.ID)
 	log.Printf("[Allocation] Success: Allocated Unit %s from Warehouse %s (Distance: %d km)", bestUnit.ID, bestUnit.WarehouseID, minDistance)
@@ -258,10 +256,7 @@ func (am *AllocationManager) SyncInventory(activeRentals []*models.Rental) {
 					// If pending, give it a timestamp so it can expire if abandoned
 					// If completed, leave timestamp nil (permanent lock)
 					if rental.PaymentStatus == models.PaymentPending {
-						// We use the rental creation time or now?
-						// Using now ensures we give them a fresh window or we could use rental.UpdatedAt
-						// Let's use Now to be safe on startup, or Rental.UpdatedAt to be strict.
-						// Using Now allows a grace period after server restart.
+
 						now := time.Now()
 						unit.ReservedAt = &now
 					} else {
